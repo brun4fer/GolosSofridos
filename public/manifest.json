@@ -1,7 +1,7 @@
 {
-  "name": "G.A.P. - Adversários Dashboard",
-  "short_name": "G.A.P.",
-  "description": "Plataforma profissional de análise tática e estatística.",
+  "name": "AP - Golos Marcados",
+  "short_name": "AP - Golos Marcados",
+  "description": "Plataforma profissional de golos marcados e analise tactica.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

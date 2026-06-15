@@ -16,15 +16,23 @@ const font = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "G.A.P. - Adversários",
-  description: "Análise de golos para equipas técnicas",
+  applicationName: "AP - Golos Marcados",
+  title: {
+    default: "AP - Golos Marcados",
+    template: "%s | AP - Golos Marcados"
+  },
+  description: "Plataforma de golos marcados e analise tactica.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    title: "G.A.P. - Adversários",
+    title: "AP - Golos Marcados",
     statusBarStyle: "default"
   },
   icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" }
+    ],
     apple: "/apple-touch-icon.png"
   }
 };

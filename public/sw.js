@@ -1,4 +1,4 @@
-const CACHE_VERSION = "football-analysis-v1";
+const CACHE_VERSION = "ap-golos-marcados-v1";
 const ASSETS = [
   "/",
   "/offline.html",
