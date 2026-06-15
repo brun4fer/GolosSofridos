@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # FootballAnalysis
 
 Next.js + Drizzle football analytics stack for capturing goals and computing live aggregates.
@@ -43,3 +44,6 @@ Next.js + Drizzle football analytics stack for capturing goals and computing liv
 - Wizard flow: team ? scorer ? involvements ? tactical context ? goalkeeper zone ? review
 - Dashboards: KPI cards, bar/pie charts, involvement leaderboard (driven by live SQL aggregations)
 - Management screens: teams & players with inline create/update/delete
+=======
+# GolosSofridos
+>>>>>>> fe09c09e2b6e2a50a90b6f04af7538225659aeb3
