@@ -196,7 +196,7 @@ const wizardStepDefinitions = [
   { id: "transition", label: "Espaço Recuperação" },
 
 
-  { id: "assist", label: "Zona Assistencia" },
+  { id: "assist", label: "Zona de referência" },
 
 
   { id: "field", label: "Zona Remate" },
@@ -1165,8 +1165,8 @@ const lookupsQuery = useQuery({ queryKey: ["lookups"], queryFn: () => fetchJson<
     const payload = {
       opponentTeamId,
       teamId,
-      scorerId,
-      assistId: assistId ?? null,
+      scorerId: involvements[0]?.playerId ?? scorerId,
+      assistId: null,
       minute,
       momentId,
       momentName: selectedMoment?.name ?? undefined,
@@ -1207,7 +1207,6 @@ const lookupsQuery = useQuery({ queryKey: ["lookups"], queryFn: () => fetchJson<
     setMessage("Golo gravado com sucesso.");
     setStep("team");
     setScorerId(undefined);
-    setAssistId(undefined);
     setMinute(0);
     setMomentId(undefined);
     setSubMomentId(undefined);
@@ -1304,8 +1303,8 @@ const updateMutation = useMutation({
     const payload = {
       opponentTeamId,
       teamId,
-      scorerId,
-      assistId: assistId ?? null,
+      scorerId: involvements[0]?.playerId ?? scorerId,
+      assistId: null,
       minute,
       momentId,
       momentName: selectedMoment?.name ?? undefined,
@@ -1716,17 +1715,11 @@ const filteredChampionships = useMemo(() => {
 
 
   const addInvolvement = (playerId: number) => {
-
-
     if (!involvements.find((i) => i.playerId === playerId && i.role === "involvement")) {
-
-
-      setInvolvements([...involvements, { playerId, role: "involvement" }]);
-
-
+      const next = [...involvements, { playerId, role: "involvement" as const }];
+      setInvolvements(next);
+      if (!scorerId) setScorerId(playerId);
     }
-
-
   };
 
 
@@ -1734,11 +1727,9 @@ const filteredChampionships = useMemo(() => {
 
 
   const removeInvolvement = (playerId: number, role: Involvement["role"]) => {
-
-
-    setInvolvements(involvements.filter((i) => !(i.playerId === playerId && i.role === role)));
-
-
+    const next = involvements.filter((i) => !(i.playerId === playerId && i.role === role));
+    setInvolvements(next);
+    if (scorerId === playerId) setScorerId(next[0]?.playerId);
   };
 
 
@@ -1945,10 +1936,7 @@ const filteredChampionships = useMemo(() => {
     opponentTeamId &&
 
 
-    scorerId &&
-
-
-    momentId &&
+    involvements.length > 0 &&momentId &&
 
 
     (isOffensiveOrganizationMoment
@@ -2132,10 +2120,7 @@ const filteredChampionships = useMemo(() => {
                     setScorerId(undefined);
 
 
-                    setAssistId(undefined);
-
-
-                  }}
+                    }}
 
 
                 >
@@ -2237,10 +2222,7 @@ const filteredChampionships = useMemo(() => {
                     setScorerId(undefined);
 
 
-                    setAssistId(undefined);
-
-
-                  }}
+                    }}
 
 
                   disabled={!seasonId}
@@ -2429,102 +2411,6 @@ const filteredChampionships = useMemo(() => {
 
 
             <div className="grid gap-4 md:grid-cols-2">
-
-
-              <div className="space-y-2">
-
-
-                <label className="text-sm font-medium">Marcador</label>
-
-
-                <Select
-
-
-                  value={scorerId?.toString() ?? ""}
-
-
-                  onChange={(e) => setScorerId(Number(e.target.value) || undefined)}
-
-
-                  disabled={!teamId || playersQuery.isLoading}
-
-
-                >
-
-
-                  <option value="">Selecionar jogador</option>
-
-
-                  {currentPlayers.map((p) => (
-
-
-                    <option key={p.id} value={p.id} className="text-black">
-
-
-                      {p.name}
-
-
-                    </option>
-
-
-                  ))}
-
-
-                </Select>
-
-
-              </div>
-
-
-              <div className="space-y-2">
-
-
-                <label className="text-sm font-medium">Assistência (opcional)</label>
-
-
-                <Select
-
-
-                  value={assistId?.toString() ?? ""}
-
-
-                  onChange={(e) => setAssistId(e.target.value ? Number(e.target.value) : undefined)}
-
-
-                  disabled={!teamId || playersQuery.isLoading}
-
-
-                >
-
-
-                  <option value="">Sem assistência</option>
-
-
-                  {currentPlayers
-
-
-                    .filter((p) => p.id !== scorerId)
-
-
-                    .map((p) => (
-
-
-                      <option key={p.id} value={p.id} className="text-black">
-
-
-                        {p.name}
-
-
-                      </option>
-
-
-                    ))}
-
-
-                </Select>
-
-
-              </div>
 
 
               <div className="md:col-span-2 space-y-3">
@@ -3386,7 +3272,7 @@ const filteredChampionships = useMemo(() => {
               <div className="flex items-center justify-between">
 
 
-                <label className="text-sm font-medium">Zona de Assistencia</label>
+                <label className="text-sm font-medium">Zona de referência</label>
 
 
                 <span className="text-xs text-muted-foreground">
@@ -3521,7 +3407,7 @@ const filteredChampionships = useMemo(() => {
                 <span>{lookupsQuery.data?.teams.find((t) => t.id === opponentTeamId)?.name ?? "-"}</span>
 
 
-                <span className="text-muted-foreground">Marcador</span>
+                <span className="text-muted-foreground">Jogador principal</span>
 
 
                 <span>{currentPlayers.find((p) => p.id === scorerId)?.name ?? "-"}</span>
@@ -3710,7 +3596,7 @@ const filteredChampionships = useMemo(() => {
                 )}
 
 
-                <span className="text-muted-foreground">Zona de assistencia</span>
+                <span className="text-muted-foreground">Zona de referência</span>
 
 
                 <span>{assistDrawingPoint ? `(${assistDrawingPoint.x.toFixed(2)}, ${assistDrawingPoint.y.toFixed(2)})` : "N/A"}</span>
@@ -3778,7 +3664,7 @@ const filteredChampionships = useMemo(() => {
                 <div className="space-y-1 rounded-xl border border-border/60 bg-card/60 p-3">
 
 
-                  <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Assistencia</div>
+                  <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Referência</div>
 
 
                   <div className="rounded-lg border border-border/50 bg-slate-950/60 p-2">
