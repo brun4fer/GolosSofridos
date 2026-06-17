@@ -234,13 +234,13 @@ export async function getRadiography(teamId: number, filters?: RadiographyFilter
       GROUP BY gi.player_id
     )
     SELECT p.id, p.name,
-      COALESCE(s.goals,0) + COALESCE(a.assists,0) + COALESCE(i.involvements,0) AS involvement,
+      GREATEST(COALESCE(i.involvements,0), COALESCE(s.goals,0)) AS involvement,
       COALESCE(p.photo_path, '') AS "photoPath"
     FROM ${players} p
     LEFT JOIN scorer s ON s.player_id = p.id
     LEFT JOIN assist a ON a.player_id = p.id
     LEFT JOIN inv i ON i.player_id = p.id
-    WHERE (COALESCE(s.goals,0) + COALESCE(a.assists,0) + COALESCE(i.involvements,0)) > 0
+    WHERE GREATEST(COALESCE(i.involvements,0), COALESCE(s.goals,0)) > 0
       AND p.team_id = ${teamId}
     ORDER BY involvement DESC, p.name
   `);

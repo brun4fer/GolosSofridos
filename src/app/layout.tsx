@@ -16,16 +16,16 @@ const font = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  applicationName: "AP - Golos Marcados",
+  applicationName: "AP - Golos Sofridos",
   title: {
-    default: "AP - Golos Marcados",
-    template: "%s | AP - Golos Marcados"
+    default: "AP - Golos Sofridos",
+    template: "%s | AP - Golos Sofridos"
   },
-  description: "Plataforma de golos marcados e analise tactica.",
+  description: "Plataforma de golos sofridos e analise tactica.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    title: "AP - Golos Marcados",
+    title: "AP - Golos Sofridos",
     statusBarStyle: "default"
   },
   icons: {

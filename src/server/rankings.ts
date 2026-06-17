@@ -206,7 +206,7 @@ export async function rankingsOverview(seasonId?: number, championshipId?: numbe
              p.name,
              t_scope.name AS team,
              COALESCE(p.photo_path, '') AS "photoPath",
-             COALESCE(s.goals, 0) + COALESCE(a.assists, 0) + COALESCE(inv.involvements, 0) AS involvement
+             GREATEST(COALESCE(inv.involvements, 0), COALESCE(s.goals, 0)) AS involvement
       FROM ${players} p
       LEFT JOIN player_scope_team pst ON pst.player_id = p.id
       LEFT JOIN ${teams} t_scope ON t_scope.id = pst.team_id

@@ -382,7 +382,7 @@ function ReferencePlayersCard({ rows }: { rows: PlayerRow[] }) {
 }
 
 function formatPointTooltip(point: MapPoint) {
-  const playerName = point.scorerName?.trim() || "Marcador";
+  const playerName = point.scorerName?.trim() || "Jogador";
   const minuteValue = typeof point.minute === "number" ? point.minute : null;
   return minuteValue !== null ? `${playerName} - ${minuteValue}'` : `${playerName} - --'`;
 }
@@ -1054,32 +1054,31 @@ export default function RadiographyPanel({
           {isSpecificFilterActive ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
               <TopMetricCard
-                title="Percentagem de Golos"
+                title="Percentagem de Golos Sofridos"
                 value={formattedGoalShare}
-                subtitle={`${momentGoalsValue.toLocaleString("pt-PT")} de ${teamGoalsValue.toLocaleString("pt-PT")} golos`}
+                subtitle={`${momentGoalsValue.toLocaleString("pt-PT")} de ${teamGoalsValue.toLocaleString("pt-PT")} golos sofridos`}
               />
               <TopMetricCard
-                title="Melhor Marcador"
+                title="Jogador referência"
                 value={bestScorer?.name ?? "—"}
-                subtitle={`${bestScorer?.goals ?? 0} golos`}
-                onClick={() => openRankingModal("Melhor Marcador", scorerRankingItems, "golo", "golos")}
+                subtitle={`${bestScorer?.goals ?? 0} golos sofridos`}
+                onClick={() => openRankingModal("Jogador referência", scorerRankingItems, "golo sofrido", "golos sofridos")}
               />
               <TopMetricCard
-                title="Mais Assistências"
-                value={bestAssist?.name ?? "—"}
-                subtitle={`${bestAssist?.assists ?? 0} assistências`}
-                onClick={() => openRankingModal("Mais Assistências", assistRankingItems, "assistência", "assistências")}
+                title="Golos com baliza"
+                value={goalEntryPoints.length.toLocaleString("pt-PT")}
+                subtitle="com ponto de entrada registado"
               />
               <TopMetricCard
-                title="Mais Participações"
+                title="Mais envolvidos"
                 value={bestParticipation?.name ?? "—"}
-                subtitle={`${bestParticipation?.involvement ?? 0} participações`}
+                subtitle={`${bestParticipation?.involvement ?? 0} envolvimentos`}
                 onClick={() =>
-                  openRankingModal("Mais Participações em Golo", participationRankingItems, "participação", "participações")
+                  openRankingModal("Mais envolvidos em golos sofridos", participationRankingItems, "envolvimento", "envolvimentos")
                 }
               />
               <TopMetricCard
-                title="Total de Golos"
+                title="Total de Golos Sofridos"
                 value={momentGoalsValue.toLocaleString("pt-PT")}
                 subtitle={`Filtro: ${selectedFilterLabel}`}
               />
@@ -1118,7 +1117,7 @@ export default function RadiographyPanel({
                   </CardContent>
                 </Card>
                 <Card className="bg-[#0c1420]/70 border border-border/60">
-                  <CardHeader title="Zonas de assistência" />
+                  <CardHeader title="Zonas de referência" />
                   <CardContent className={MAP_CARD_CONTENT_CLASS}>
                     <FieldPinMap points={assistZonePoints} pinColor="#38bdf8" />
                   </CardContent>
@@ -1193,7 +1192,7 @@ export default function RadiographyPanel({
                   </CardContent>
                 </Card>
                 <Card className="bg-[#0c1420]/70 border border-border/60">
-                  <CardHeader title="Zonas de assistência" />
+                  <CardHeader title="Zonas de referência" />
                   <CardContent className={MAP_CARD_CONTENT_CLASS}>
                     <FieldPinMap points={assistZonePoints} pinColor="#38bdf8" />
                   </CardContent>
@@ -1203,26 +1202,19 @@ export default function RadiographyPanel({
               {shouldShowTopPlayerRankings && (
                 <div className="grid gap-4 lg:grid-cols-3">
                   <TopPlayersCard
-                    title="Top Marcadores"
+                    title="Jogadores referência"
                     rows={radiography.topScorers}
                     valueKey="goals"
                     valueLabel="G"
-                    onClick={() => openRankingModal("Top Marcadores", scorerRankingItems, "golo", "golos")}
+                    onClick={() => openRankingModal("Jogadores referência", scorerRankingItems, "golo sofrido", "golos sofridos")}
                   />
                   <TopPlayersCard
-                    title="Top Assistências"
-                    rows={radiography.topAssists}
-                    valueKey="assists"
-                    valueLabel="A"
-                    onClick={() => openRankingModal("Top Assistências", assistRankingItems, "assistência", "assistências")}
-                  />
-                  <TopPlayersCard
-                    title="Top Participações"
+                    title="Jogadores envolvidos"
                     rows={radiography.topParticipation}
                     valueKey="involvement"
                     valueLabel="Part."
                     onClick={() =>
-                      openRankingModal("Top Participações", participationRankingItems, "participação", "participações")
+                      openRankingModal("Jogadores envolvidos", participationRankingItems, "envolvimento", "envolvimentos")
                     }
                   />
                 </div>

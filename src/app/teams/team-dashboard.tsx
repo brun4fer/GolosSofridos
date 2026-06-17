@@ -87,7 +87,7 @@ function GoalNetPinMap({ goals }: { goals: GoalEvent[] }) {
                 onMouseEnter={(e) => {
                   const rect = svgRef.current?.getBoundingClientRect();
                   if (!rect) return;
-                  const label = `${g.scorerName ?? "Marcador"} —`;
+                  const label = `${g.scorerName ?? "Jogador"} —`;
                   setTooltip({
                     x: e.clientX - rect.left,
                     y: e.clientY - rect.top,
@@ -243,11 +243,11 @@ export function TeamDashboard({ initialTeams }: { initialTeams: Team[] }) {
     mutationFn: async (goalId: number) => {
       const res = await fetch(`/api/goals/${goalId}`, { method: "DELETE" });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error ?? "Erro ao eliminar o golo.");
+      if (!res.ok) throw new Error(json?.error ?? "Erro ao eliminar o golo sofrido.");
       return json;
     },
     onSuccess: (_data, goalId) => {
-      setDeleteFeedback("Golo eliminado com sucesso.");
+      setDeleteFeedback("Golo sofrido eliminado com sucesso.");
       setPendingDeleteGoalId(null);
       if (editingGoalId === goalId) {
         setEditingGoalId(null);
@@ -256,11 +256,12 @@ export function TeamDashboard({ initialTeams }: { initialTeams: Team[] }) {
       refreshAll();
     },
     onError: (error: any) => {
-      setDeleteFeedback(error?.message ?? "Erro ao eliminar o golo.");
+      setDeleteFeedback(error?.message ?? "Erro ao eliminar o golo sofrido.");
     }
   });
 
   const goalEvents = useMemo(() => goalsQuery.data ?? [], [goalsQuery.data]);
+  const goalsWithGoalPoint = goalEvents.filter((goal) => goal.goalCoordinates).length;
   const goalPageCount = Math.ceil(goalEvents.length / PAGE_SIZE);
   const paginatedGoalEvents = goalEvents.slice(goalPage * PAGE_SIZE, (goalPage + 1) * PAGE_SIZE);
 
@@ -410,41 +411,28 @@ export function TeamDashboard({ initialTeams }: { initialTeams: Team[] }) {
                 className="border-border/60 bg-slate-900/55 cursor-pointer transition hover:border-cyan-400/50 hover:bg-slate-900/70"
                 role="button"
                 tabIndex={0}
-                onClick={() => openRankingModal("Melhor Marcador", scorerRankingItems, "golo", "golos")}
+                onClick={() => openRankingModal("Jogador referência", scorerRankingItems, "golo sofrido", "golos sofridos")}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    openRankingModal("Melhor Marcador", scorerRankingItems, "golo", "golos");
+                    openRankingModal("Jogador referência", scorerRankingItems, "golo sofrido", "golos sofridos");
                   }
                 }}
               >
-                <CardHeader title="Melhor Marcador" />
+                <CardHeader title="Jogador referência" />
                 <CardContent>
                   <div className="line-clamp-2 text-sm font-semibold leading-snug text-white break-words whitespace-normal">
                     {topScorer?.name ?? "Sem dados"}
                   </div>
-                  <div className="text-xs text-muted-foreground">{topScorer ? `${topScorer.goals} golos` : "Sem registos"}</div>
+                  <div className="text-xs text-muted-foreground">{topScorer ? `${topScorer.goals} golos sofridos` : "Sem registos"}</div>
                 </CardContent>
               </Card>
 
-              <Card
-                className="border-border/60 bg-slate-900/55 cursor-pointer transition hover:border-cyan-400/50 hover:bg-slate-900/70"
-                role="button"
-                tabIndex={0}
-                onClick={() => openRankingModal("Mais Assistências", assistRankingItems, "assistência", "assistências")}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    openRankingModal("Mais Assistências", assistRankingItems, "assistência", "assistências");
-                  }
-                }}
-              >
-                <CardHeader title="Mais Assistencias" />
+              <Card className="border-border/60 bg-slate-900/55">
+                <CardHeader title="Golos com baliza" />
                 <CardContent>
-                  <div className="line-clamp-2 text-sm font-semibold leading-snug text-white break-words whitespace-normal">
-                    {topAssistant?.name ?? "Sem dados"}
-                  </div>
-                  <div className="text-xs text-muted-foreground">{topAssistant ? `${topAssistant.assists} assistencias` : "Sem registos"}</div>
+                  <div className="text-3xl font-semibold text-white">{goalsWithGoalPoint}</div>
+                  <div className="text-xs text-muted-foreground">com ponto na baliza</div>
                 </CardContent>
               </Card>
 
@@ -453,26 +441,26 @@ export function TeamDashboard({ initialTeams }: { initialTeams: Team[] }) {
                 role="button"
                 tabIndex={0}
                 onClick={() =>
-                  openRankingModal("Mais Participações em Golo", involvementRankingItems, "participação", "participações")
+                  openRankingModal("Mais envolvidos em golos sofridos", involvementRankingItems, "envolvimento", "envolvimentos")
                 }
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    openRankingModal("Mais Participações em Golo", involvementRankingItems, "participação", "participações");
+                    openRankingModal("Mais envolvidos em golos sofridos", involvementRankingItems, "envolvimento", "envolvimentos");
                   }
                 }}
               >
-                <CardHeader title="Mais Participacoes em Golo" />
+                <CardHeader title="Mais envolvidos" />
                 <CardContent>
                   <div className="line-clamp-2 text-sm font-semibold leading-snug text-white break-words whitespace-normal">
                     {topParticipation?.name ?? "Sem dados"}
                   </div>
-                  <div className="text-xs text-muted-foreground">{topParticipation ? `${topParticipation.involvement} participacoes` : "Sem registos"}</div>
+                  <div className="text-xs text-muted-foreground">{topParticipation ? `${topParticipation.involvement} envolvimentos` : "Sem registos"}</div>
                 </CardContent>
               </Card>
 
               <Card className="border-border/60 bg-slate-900/55">
-                <CardHeader title="Total de Golos" />
+                <CardHeader title="Total de Golos Sofridos" />
                 <CardContent>
                   <div className="text-3xl font-semibold text-white">{totalGoals}</div>
                   <div className="text-xs text-muted-foreground">{goalEvents.length} registos</div>
@@ -516,18 +504,18 @@ export function TeamDashboard({ initialTeams }: { initialTeams: Team[] }) {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <CardHeader title="Mapa da Baliza" description="Pinpoints de todos os golos" />
+              <CardHeader title="Mapa da Baliza" description="Pinpoints de todos os golos sofridos" />
               <CardContent>{goalEvents.length ? <GoalNetPinMap goals={goalEvents} /> : <div className="text-sm text-muted-foreground">Sem dados</div>}</CardContent>
             </Card>
             <Card>
-              <CardHeader title="Momentos do Golo" />
+              <CardHeader title="Momentos do Golo Sofrido" />
               <CardContent>
                 {momentsQuery.data ? <SimpleBar data={momentsQuery.data} xKey="moment" yKey="goals" /> : <div className="text-sm text-muted-foreground">Sem dados</div>}
               </CardContent>
             </Card>
           </div>
           <Card>
-            <CardHeader title="Histórico de Golos" description="Editar rapidamente qualquer golo" />
+            <CardHeader title="Histórico de Golos Sofridos" description="Editar rapidamente qualquer golo sofrido" />
             <CardContent className="space-y-2 text-sm">
               {deleteFeedback && (
                 <div className="rounded-md border border-border/60 bg-card/60 px-3 py-2 text-xs text-muted-foreground">
@@ -543,6 +531,7 @@ export function TeamDashboard({ initialTeams }: { initialTeams: Team[] }) {
                         &apos;
                       </span>
                       <span className="font-medium">{g.scorerName ?? `#${g.scorerId}`}</span>
+                      <Badge className="bg-emerald-500/10 text-emerald-100">Jogador referência</Badge>
                       <Badge className="bg-slate-700/60 text-slate-50">vs {g.opponentName ?? "Adversário indefinido"}</Badge>
                       {g.goalCoordinates && (
                         <Badge className="bg-cyan-500/10 text-cyan-100">
@@ -574,7 +563,7 @@ export function TeamDashboard({ initialTeams }: { initialTeams: Team[] }) {
                   </div>
                 ))
               ) : (
-                <div className="text-muted-foreground">Ainda sem eventos.</div>
+                <div className="text-muted-foreground">Ainda sem golos sofridos.</div>
               )}
               {goalPageCount > 1 && (
                 <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground">
@@ -600,8 +589,8 @@ export function TeamDashboard({ initialTeams }: { initialTeams: Team[] }) {
           </Card>
           <ConfirmDialog
             open={pendingDeleteGoalId !== null}
-            title="Eliminar Golo"
-            description="Tem a certeza de que pretende eliminar este golo?"
+            title="Eliminar Golo Sofrido"
+            description="Tem a certeza de que pretende eliminar este golo sofrido?"
             cancelLabel="Cancelar"
             confirmLabel="Confirmar eliminação"
             loading={deleteGoalMutation.isPending}

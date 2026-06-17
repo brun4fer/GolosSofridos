@@ -187,7 +187,7 @@ export default async function GoalDetail({ params }: { params: { id: string } })
 
               <div className="mt-4 space-y-2">
 
-                <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Jogadores envolventes</div>
+                <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Jogadores envolvidos</div>
 
                 <div className="space-y-2">
 
@@ -209,7 +209,7 @@ export default async function GoalDetail({ params }: { params: { id: string } })
 
                         <div className="text-sm font-semibold">{inv.playerName ?? inv.playerId}</div>
 
-                        <div className="text-xs text-muted-foreground">{inv.role === "assist" ? "Assistência" : "Envolvimento"}</div>
+                        <div className="text-xs text-muted-foreground">Jogador envolvido</div>
 
                       </div>
 
@@ -265,15 +265,15 @@ export default async function GoalDetail({ params }: { params: { id: string } })
 
               <span>{goal.opponentName ?? goal.opponentTeamId ?? "-"}</span>
 
-              <span className="text-muted-foreground">Marcador</span>
+              <span className="text-muted-foreground">Jogadores envolvidos</span>
 
-              <span>{goal.scorerName ?? goal.scorerId}</span>
+              <span>
+                {involvements.length > 0
+                  ? involvements.map((inv) => inv.playerName ?? `#${inv.playerId}`).join(", ")
+                  : goal.scorerName ?? goal.scorerId}
+              </span>
 
-              <span className="text-muted-foreground">Assistência</span>
-
-              <span>{goal.assistName ?? goal.assistId ?? "-"}</span>
-
-              <span className="text-muted-foreground">Ponto da assistencia</span>
+              <span className="text-muted-foreground">Ponto de referência</span>
 
               <span>{assistDrawing ? `(${assistDrawing.x.toFixed(2)}, ${assistDrawing.y.toFixed(2)})` : "-"}</span>
 
@@ -286,7 +286,7 @@ export default async function GoalDetail({ params }: { params: { id: string } })
 
               {throwInTakerDisplay && (
                 <div className="col-span-2 grid grid-cols-2">
-                  <span className="text-muted-foreground">Marcador do lançamento</span>
+                  <span className="text-muted-foreground">Executante do lançamento</span>
                   <span className="text-right font-medium">{throwInTakerDisplay}</span>
                 </div>
               )}
@@ -341,7 +341,7 @@ export default async function GoalDetail({ params }: { params: { id: string } })
 
                 <>
 
-                  <span className="text-muted-foreground">Marcador do canto</span>
+                  <span className="text-muted-foreground">Executante do canto</span>
 
                   <span>{goal.cornerTakerName ?? goal.cornerTakerId}</span>
 
@@ -353,7 +353,7 @@ export default async function GoalDetail({ params }: { params: { id: string } })
 
                 <>
 
-                  <span className="text-muted-foreground">Marcador da falta</span>
+                  <span className="text-muted-foreground">Executante da falta</span>
 
                   <span>{goal.freekickTakerName ?? goal.freekickTakerId}</span>
 
@@ -365,7 +365,7 @@ export default async function GoalDetail({ params }: { params: { id: string } })
 
                 <>
 
-                  <span className="text-muted-foreground">Marcador do penálti</span>
+                  <span className="text-muted-foreground">Executante do penálti</span>
 
                   <span>{goal.penaltyTakerName ?? goal.penaltyTakerId}</span>
 
@@ -399,14 +399,14 @@ export default async function GoalDetail({ params }: { params: { id: string } })
 
         <Card>
 
-          <CardHeader title="Ponto da Assistencia no Campo" />
+          <CardHeader title="Ponto de Referência no Campo" />
 
           <CardContent>
 
             {hasAssistDrawing && assistDrawing ? (
               <Pitch x={assistDrawing.x} y={assistDrawing.y} pinColor="#38bdf8" />
             ) : (
-              <div className="text-sm text-muted-foreground">Sem coordenadas de assistencia.</div>
+              <div className="text-sm text-muted-foreground">Sem coordenadas de referência.</div>
             )}
 
           </CardContent>

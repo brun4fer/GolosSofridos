@@ -9,13 +9,13 @@ export function Header() {
         <div className="flex items-center gap-2">
           <Image
             src="/icon-192.png"
-            alt="AP - Golos Marcados"
+            alt="AP - Golos Sofridos"
             width={36}
             height={36}
             className="h-9 w-9 rounded-xl shadow-lg shadow-emerald-500/30"
             priority
           />
-          <div className="text-sm font-semibold tracking-tight md:text-lg">AP - Golos Marcados</div>
+          <div className="text-sm font-semibold tracking-tight md:text-lg">AP - Golos Sofridos</div>
         </div>
         <nav className="flex items-center gap-3 text-sm font-medium">
           <a href="/manage/config" className="rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-white/5">
@@ -28,7 +28,7 @@ export function Header() {
             Jogadores
           </a>
           <a href="/goals" className="rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-white/5">
-            Registar Golo
+            Registar Golo Sofrido
           </a>
           <a href="/teams" className="rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-white/5">
             Estatísticas

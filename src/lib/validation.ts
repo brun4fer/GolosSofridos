@@ -35,7 +35,7 @@ export const goalInputSchema = z
   .object({
     opponentTeamId: z.number().int().positive(),
     teamId: z.number().int().positive(),
-    scorerId: z.number().int().positive(),
+    scorerId: z.number().int().positive().optional().nullable(),
     assistId: z.number().int().positive().optional().nullable(),
     minute: z.number().int().min(0).max(130),
     momentId: z.number().int().positive(),

@@ -463,7 +463,7 @@ export default function RankingsPage() {
                     <div className="text-white font-semibold">{selectedChampionship?.name}</div>
                     <div className="text-muted-foreground">{selectedSeason?.name}</div>
                     <div className="pt-2 text-xs text-muted-foreground">
-                      12 rankings: Totais, bola parada e destaques individuais.
+                      11 rankings: Totais, bola parada e destaques individuais.
                     </div>
                   </CardContent>
                 </Card>
@@ -471,15 +471,15 @@ export default function RankingsPage() {
                   className="bg-gradient-to-br from-emerald-500/15 via-emerald-500/10 to-cyan-500/10 cursor-pointer transition hover:border-cyan-400/50 hover:bg-emerald-500/20"
                   role="button"
                   tabIndex={0}
-                  onClick={() => openRankingModal("1. Total de Golos", rankingsQuery.data.totalGoals, "goals", "golo", "golos")}
+                  onClick={() => openRankingModal("1. Total de Golos Sofridos", rankingsQuery.data.totalGoals, "goals", "golo sofrido", "golos sofridos")}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      openRankingModal("1. Total de Golos", rankingsQuery.data.totalGoals, "goals", "golo", "golos");
+                      openRankingModal("1. Total de Golos Sofridos", rankingsQuery.data.totalGoals, "goals", "golo sofrido", "golos sofridos");
                     }
                   }}
                 >
-                  <CardHeader title="Total de Golos" />
+                  <CardHeader title="Total de Golos Sofridos" />
                   <CardContent>
                     <div className="text-3xl font-semibold text-white">
                       {rankingsQuery.data.totalGoals[0]?.goals ?? 0}
@@ -495,12 +495,12 @@ export default function RankingsPage() {
                   role="button"
                   tabIndex={0}
                   onClick={() =>
-                    openRankingModal("2. Golos em Organização", rankingsQuery.data.organization, "goals", "golo", "golos")
+                    openRankingModal("2. Golos em Organização", rankingsQuery.data.organization, "goals", "golo sofrido", "golos sofridos")
                   }
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      openRankingModal("2. Golos em Organização", rankingsQuery.data.organization, "goals", "golo", "golos");
+                      openRankingModal("2. Golos em Organização", rankingsQuery.data.organization, "goals", "golo sofrido", "golos sofridos");
                     }
                   }}
                 >
@@ -519,11 +519,11 @@ export default function RankingsPage() {
                   className="bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-amber-500/5 cursor-pointer transition hover:border-cyan-400/50 hover:bg-amber-500/20"
                   role="button"
                   tabIndex={0}
-                  onClick={() => openRankingModal("3. Golos em Transição", rankingsQuery.data.transition, "goals", "golo", "golos")}
+                  onClick={() => openRankingModal("3. Golos em Transição", rankingsQuery.data.transition, "goals", "golo sofrido", "golos sofridos")}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      openRankingModal("3. Golos em Transição", rankingsQuery.data.transition, "goals", "golo", "golos");
+                      openRankingModal("3. Golos em Transição", rankingsQuery.data.transition, "goals", "golo sofrido", "golos sofridos");
                     }
                   }}
                 >
@@ -542,106 +542,97 @@ export default function RankingsPage() {
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <RankingCard
-                  title="1. Total de Golos"
+                  title="1. Total de Golos Sofridos"
                   rows={rankingsQuery.data.totalGoals}
                   valueKey="goals"
-                  valueLabel="golos"
-                  onClick={() => openRankingModal("1. Total de Golos", rankingsQuery.data.totalGoals, "goals", "golo", "golos")}
+                  valueLabel="golos sofridos"
+                  onClick={() => openRankingModal("1. Total de Golos Sofridos", rankingsQuery.data.totalGoals, "goals", "golo sofrido", "golos sofridos")}
                 />
                 <RankingCard
                   title="2. Golos em Organização"
                   rows={rankingsQuery.data.organization}
                   valueKey="goals"
-                  valueLabel="golos"
+                  valueLabel="golos sofridos"
                   onClick={() =>
-                    openRankingModal("2. Golos em Organização", rankingsQuery.data.organization, "goals", "golo", "golos")
+                    openRankingModal("2. Golos em Organização", rankingsQuery.data.organization, "goals", "golo sofrido", "golos sofridos")
                   }
                 />
                 <RankingCard
                   title="3. Golos em Transição"
                   rows={rankingsQuery.data.transition}
                   valueKey="goals"
-                  valueLabel="golos"
-                  onClick={() => openRankingModal("3. Golos em Transição", rankingsQuery.data.transition, "goals", "golo", "golos")}
+                  valueLabel="golos sofridos"
+                  onClick={() => openRankingModal("3. Golos em Transição", rankingsQuery.data.transition, "goals", "golo sofrido", "golos sofridos")}
                 />
                 <RankingCard
                   title="4. Total Bola Parada"
                   rows={rankingsQuery.data.setPiecesTotal}
                   valueKey="goals"
-                  valueLabel="golos"
+                  valueLabel="golos sofridos"
                   onClick={() =>
-                    openRankingModal("4. Total Bola Parada", rankingsQuery.data.setPiecesTotal, "goals", "golo", "golos")
+                    openRankingModal("4. Total Bola Parada", rankingsQuery.data.setPiecesTotal, "goals", "golo sofrido", "golos sofridos")
                   }
                 />
                 <RankingCard
                   title="5. Cantos"
                   rows={rankingsQuery.data.corners}
                   valueKey="goals"
-                  valueLabel="golos"
-                  onClick={() => openRankingModal("5. Cantos", rankingsQuery.data.corners, "goals", "golo", "golos")}
+                  valueLabel="golos sofridos"
+                  onClick={() => openRankingModal("5. Cantos", rankingsQuery.data.corners, "goals", "golo sofrido", "golos sofridos")}
                 />
                 <RankingCard
                   title="6. Livres"
                   rows={rankingsQuery.data.freeKicks}
                   valueKey="goals"
-                  valueLabel="golos"
-                  onClick={() => openRankingModal("6. Livres", rankingsQuery.data.freeKicks, "goals", "golo", "golos")}
+                  valueLabel="golos sofridos"
+                  onClick={() => openRankingModal("6. Livres", rankingsQuery.data.freeKicks, "goals", "golo sofrido", "golos sofridos")}
                 />
                 <RankingCard
                   title="7. Livres Diretos"
                   rows={rankingsQuery.data.freeKicksDirect}
                   valueKey="goals"
-                  valueLabel="golos"
+                  valueLabel="golos sofridos"
                   onClick={() =>
-                    openRankingModal("7. Livres Diretos", rankingsQuery.data.freeKicksDirect, "goals", "golo", "golos")
+                    openRankingModal("7. Livres Diretos", rankingsQuery.data.freeKicksDirect, "goals", "golo sofrido", "golos sofridos")
                   }
                 />
                 <RankingCard
                   title="8. Penáltis"
                   rows={rankingsQuery.data.penalties}
                   valueKey="goals"
-                  valueLabel="golos"
-                  onClick={() => openRankingModal("8. Penáltis", rankingsQuery.data.penalties, "goals", "golo", "golos")}
+                  valueLabel="golos sofridos"
+                  onClick={() => openRankingModal("8. Penáltis", rankingsQuery.data.penalties, "goals", "golo sofrido", "golos sofridos")}
                 />
                 <RankingCard
                   title="9. Lançamentos Laterais"
                   rows={rankingsQuery.data.throwIns}
                   valueKey="goals"
-                  valueLabel="golos"
+                  valueLabel="golos sofridos"
                   onClick={() =>
-                    openRankingModal("9. Lançamentos Laterais", rankingsQuery.data.throwIns, "goals", "golo", "golos")
+                    openRankingModal("9. Lançamentos Laterais", rankingsQuery.data.throwIns, "goals", "golo sofrido", "golos sofridos")
                   }
                 />
                 <TopPlayersCard
-                  title="10. Top Marcadores"
+                  title="10. Jogadores referência"
                   rows={rankingsQuery.data.topScorers}
                   valueKey="goals"
-                  valueLabel="golos"
+                  valueLabel="golos sofridos"
                   onClick={() =>
-                    openRankingModal("10. Top Marcadores", rankingsQuery.data.topScorers, "goals", "golo", "golos")
+                    openRankingModal("10. Jogadores referência", rankingsQuery.data.topScorers, "goals", "golo sofrido", "golos sofridos")
                   }
                 />
                 <TopPlayersCard
-                  title="11. Assistências"
-                  rows={rankingsQuery.data.topAssists}
-                  valueKey="assists"
-                  valueLabel="assist."
-                  onClick={() =>
-                    openRankingModal("11. Assistências", rankingsQuery.data.topAssists, "assists", "assistência", "assistências")
-                  }
-                />
-                <TopPlayersCard
-                  title="12. Participação em Golos (G+A)"
+                  title="11. Jogadores envolvidos"
                   rows={rankingsQuery.data.goalInvolvement}
                   valueKey="involvement"
-                  valueLabel="ações"
+                  valueLabel="envolv."
                   onClick={() =>
                     openRankingModal(
-                      "12. Participação em Golos (G+A)",
+                      "11. Jogadores envolvidos",
                       rankingsQuery.data.goalInvolvement,
                       "involvement",
-                      "participação",
-                      "participações"
+                      "envolvimento",
+                      "envolvimentos"
                     )
                   }
                 />
@@ -781,7 +772,7 @@ export default function RankingsPage() {
               nameB={nameB}
             />
             <ComparisonStat
-              label="Total de Golos"
+              label="Total de Golos Sofridos"
               valueA={compareQuery.data.A.totalGoals}
               valueB={compareQuery.data.B.totalGoals}
               nameA={nameA}

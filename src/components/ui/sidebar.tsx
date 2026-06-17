@@ -7,7 +7,7 @@ type NavItem = { href: string; label: string; icon: React.ReactNode };
 
 const items: NavItem[] = [
   { href: "/teams", label: "Estatísticas", icon: <BarChart3 className="h-4 w-4" /> },
-  { href: "/goals", label: "Registar Golo", icon: <Trophy className="h-4 w-4" /> },
+  { href: "/goals", label: "Registar Golo Sofrido", icon: <Trophy className="h-4 w-4" /> },
   { href: "/rankings", label: "Rankings", icon: <Trophy className="h-4 w-4" /> },
   { href: "/manage/teams", label: "Equipas", icon: <Users className="h-4 w-4" /> }
 ];

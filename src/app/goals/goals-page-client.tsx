@@ -98,14 +98,14 @@ export function GoalsPageClient() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Registar Golo</h1>
-        <p className="text-sm text-muted-foreground">Fluxo guiado com seleção de zona da baliza e desenho tático em SVG.</p>
+        <h1 className="text-2xl font-semibold">Registar Golo Sofrido</h1>
+        <p className="text-sm text-muted-foreground">Fluxo guiado com jogadores envolvidos, zona da baliza e desenho tático em SVG.</p>
       </div>
 
       <GoalWizard />
 
       <Card>
-        <CardHeader title="Histórico de Golos" description="5 registos por página" />
+        <CardHeader title="Histórico de Golos Sofridos" description="5 registos por página" />
         <CardContent className="space-y-3">
           {deleteFeedback && (
             <div className="rounded-md border border-border/60 bg-card/60 px-3 py-2 text-xs text-muted-foreground">
@@ -166,6 +166,7 @@ export function GoalsPageClient() {
                     &apos;
                   </span>
                   <span className="font-medium text-white">{goal.scorerName ?? `#${goal.scorerId}`}</span>
+                  <Badge className="bg-emerald-500/10 text-emerald-100">Jogador referência</Badge>
                   <Badge className="bg-slate-700/60 text-slate-50">vs {goal.opponentName ?? "Adversário indefinido"}</Badge>
                   {goal.goalCoordinates && (
                     <Badge className="bg-cyan-500/10 text-cyan-100">
@@ -190,7 +191,7 @@ export function GoalsPageClient() {
               </div>
             ))
           ) : (
-            <div className="text-sm text-muted-foreground">Ainda sem golos para este contexto.</div>
+            <div className="text-sm text-muted-foreground">Ainda sem golos sofridos para este contexto.</div>
           ))}
 
           {teamId && totalPages > 1 && (
@@ -217,8 +218,8 @@ export function GoalsPageClient() {
       </Card>
       <ConfirmDialog
         open={pendingDeleteGoalId !== null}
-        title="Eliminar Golo"
-        description="Tem a certeza de que pretende eliminar este golo?"
+        title="Eliminar Golo Sofrido"
+        description="Tem a certeza de que pretende eliminar este golo sofrido?"
         cancelLabel="Cancelar"
         confirmLabel="Confirmar eliminação"
         loading={deleteGoalMutation.isPending}

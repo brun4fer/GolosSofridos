@@ -103,7 +103,7 @@ export async function mostInvolved(teamId: number) {
     FROM (
       SELECT p.id,
              p.name,
-             COALESCE(gc.goals, 0) + COALESCE(ac.assists, 0) + COALESCE(ic.involvements, 0) AS involvement
+             GREATEST(COALESCE(ic.involvements, 0), COALESCE(gc.goals, 0)) AS involvement
       FROM ${players} p
       LEFT JOIN goal_counts gc ON gc.scorer_id = p.id
       LEFT JOIN assist_counts ac ON ac.assist_id = p.id

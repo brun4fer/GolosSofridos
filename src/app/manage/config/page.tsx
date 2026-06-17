@@ -89,7 +89,7 @@ export default function ConfigPage() {
         <div className="flex flex-wrap gap-2">
           <Link href="/goals">
             <Button variant="secondary" size="sm" type="button">
-              Ir para Registar Golo
+              Ir para Registar Golo Sofrido
             </Button>
           </Link>
         </div>

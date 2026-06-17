@@ -187,7 +187,7 @@ const wizardStepDefinitions = [
   { id: "team", label: "Equipa" },
 
 
-  { id: "scorer", label: "Marcador & Assistência" },
+  { id: "scorer", label: "Jogadores envolvidos" },
 
 
   { id: "context", label: "Momentos" },
@@ -1114,7 +1114,7 @@ const lookupsQuery = useQuery({ queryKey: ["lookups"], queryFn: () => fetchJson<
       ? subMomentSequencePayload[subMomentSequencePayload.length - 1]?.subMomentId
       : resolvedSubMomentId;
 
-    if (!teamId || !opponentTeamId || !scorerId || !momentId || !effectiveSubMomentId || effectiveActionIds.length === 0) {
+    if (!teamId || !opponentTeamId || involvements.length === 0 || !momentId || !effectiveSubMomentId || effectiveActionIds.length === 0) {
       throw new Error("Campos obrigatórios em falta");
     }
     if (isOffensiveOrganizationMoment && !hasCompleteOffensiveOrganizationCatalogue) {
@@ -1253,7 +1253,7 @@ const updateMutation = useMutation({
       ? subMomentSequencePayload[subMomentSequencePayload.length - 1]?.subMomentId
       : resolvedSubMomentId;
 
-    if (!teamId || !opponentTeamId || !scorerId || !momentId || !effectiveSubMomentId || effectiveActionIds.length === 0) {
+    if (!teamId || !opponentTeamId || involvements.length === 0 || !momentId || !effectiveSubMomentId || effectiveActionIds.length === 0) {
       throw new Error("Campos obrigatórios em falta");
     }
     if (isOffensiveOrganizationMoment && !hasCompleteOffensiveOrganizationCatalogue) {
@@ -1744,8 +1744,12 @@ const filteredChampionships = useMemo(() => {
 
     setTeamId(existingGoal.teamId);
     setOpponentTeamId(existingGoal.opponentTeamId ?? undefined);
-    setScorerId(existingGoal.scorerId);
-    setAssistId(existingGoal.assistId ?? undefined);
+    const existingPlayerIds = existingGoal.involvements?.map((inv) => inv.playerId) ?? [];
+    const existingInvolvements = [...new Set(existingPlayerIds.length > 0 ? existingPlayerIds : [existingGoal.scorerId])].map(
+      (playerId) => ({ playerId, role: "involvement" as const })
+    );
+    setScorerId(existingInvolvements[0]?.playerId ?? existingGoal.scorerId);
+    setAssistId(undefined);
     setMinute(existingGoal.minute);
     setMomentId(existingGoal.momentId);
     setSubMomentId(existingGoal.subMomentId);
@@ -1773,7 +1777,7 @@ const filteredChampionships = useMemo(() => {
     setGoalkeeperOutlet(existingGoal.goalkeeperOutlet ?? "");
     setNotes(existingGoal.notes ?? "");
     setVideoPath(existingGoal.videoPath ?? "");
-    setInvolvements(existingGoal.involvements ?? []);
+    setInvolvements(existingInvolvements);
     setCornerTakerId(existingGoal.cornerTakerId ?? undefined);
     setFreekickTakerId(existingGoal.freekickTakerId ?? undefined);
     setPenaltyTakerId(existingGoal.penaltyTakerId ?? undefined);
@@ -1852,7 +1856,7 @@ const filteredChampionships = useMemo(() => {
       case "scorer":
 
 
-        return Boolean(scorerId);
+        return involvements.length > 0;
 
 
       case "context":
@@ -1936,7 +1940,10 @@ const filteredChampionships = useMemo(() => {
     opponentTeamId &&
 
 
-    involvements.length > 0 &&momentId &&
+    involvements.length > 0 &&
+
+
+    momentId &&
 
 
     (isOffensiveOrganizationMoment
@@ -2422,10 +2429,10 @@ const filteredChampionships = useMemo(() => {
                   <div>
 
 
-                    <div className="text-sm font-medium">Involvimentos secundários</div>
+                    <div className="text-sm font-medium">Jogadores envolvidos no golo sofrido</div>
 
 
-                    <p className="text-xs text-muted-foreground">Marcar jogadores que participaram na jogada para a métrica ‘Mais interveniente’.</p>
+                    <p className="text-xs text-muted-foreground">Seleciona os jogadores envolvidos no lance do golo sofrido. O primeiro selecionado fica como referência interna para compatibilidade.</p>
 
 
                   </div>
@@ -2506,7 +2513,7 @@ const filteredChampionships = useMemo(() => {
                         <Badge key={`${inv.playerId}-${inv.role}`} className="bg-emerald-500/10 text-emerald-100">
 
 
-                          {player?.name ?? inv.playerId} / {inv.role === "assist" ? "assistência" : "envolvimento"}
+                          {player?.name ?? inv.playerId} / envolvido
 
 
                           <button className="ml-2" onClick={() => removeInvolvement(inv.playerId, inv.role)}>
@@ -2895,7 +2902,7 @@ const filteredChampionships = useMemo(() => {
                     <div className="space-y-2">
 
 
-                      <label className="text-sm font-medium">Marcador do Canto</label>
+                      <label className="text-sm font-medium">Executante do Canto</label>
 
 
                       <Select
@@ -2943,7 +2950,7 @@ const filteredChampionships = useMemo(() => {
                     <div className="rounded-xl border border-dashed border-border/60 bg-card/30 px-3 py-2 text-xs text-muted-foreground">
 
 
-                    Seleciona a ação &ldquo;Marcador do canto&rdquo; para indicar o jogador responsável.
+                    Seleciona a ação correspondente ao canto para indicar o jogador responsável.
 
 
                     </div>
@@ -2983,7 +2990,7 @@ const filteredChampionships = useMemo(() => {
                     <div className="space-y-2">
 
 
-                      <label className="text-sm font-medium">Marcador da Falta</label>
+                      <label className="text-sm font-medium">Executante da Falta</label>
 
 
                       <Select
@@ -3031,7 +3038,7 @@ const filteredChampionships = useMemo(() => {
                     <div className="rounded-xl border border-dashed border-border/60 bg-card/30 px-3 py-2 text-xs text-muted-foreground">
 
 
-                      Escolhe a ação &ldquo;Marcador da falta&rdquo; para desbloquear o seletor de jogador.
+                      Escolhe a ação correspondente à falta para desbloquear o seletor de jogador.
 
 
                     </div>
@@ -3057,7 +3064,7 @@ const filteredChampionships = useMemo(() => {
                 <div className="space-y-2">
 
 
-                  <label className="text-sm font-medium">Marcador do Penálti</label>
+                  <label className="text-sm font-medium">Executante do Penálti</label>
 
 
                   <Select
@@ -3407,16 +3414,14 @@ const filteredChampionships = useMemo(() => {
                 <span>{lookupsQuery.data?.teams.find((t) => t.id === opponentTeamId)?.name ?? "-"}</span>
 
 
-                <span className="text-muted-foreground">Jogador principal</span>
+                <span className="text-muted-foreground">Jogadores envolvidos</span>
 
 
-                <span>{currentPlayers.find((p) => p.id === scorerId)?.name ?? "-"}</span>
-
-
-                <span className="text-muted-foreground">Assistência</span>
-
-
-                <span>{currentPlayers.find((p) => p.id === assistId)?.name ?? "-"}</span>
+                <span>
+                  {involvements.length > 0
+                    ? involvements.map((inv) => currentPlayers.find((p) => p.id === inv.playerId)?.name ?? `#${inv.playerId}`).join(", ")
+                    : "-"}
+                </span>
 
 
                 <span className="text-muted-foreground">Minuto</span>
@@ -3465,7 +3470,7 @@ const filteredChampionships = useMemo(() => {
                 )}
                 {hasThrowInMarkerAction && (
                   <>
-                    <span className="text-muted-foreground">Marcador do lançamento</span>
+                    <span className="text-muted-foreground">Executante do lançamento</span>
                     <span>{currentPlayers.find((p) => p.id === throwInTakerId)?.name ?? "-"}</span>
                   </>
                 )}
@@ -3500,7 +3505,7 @@ const filteredChampionships = useMemo(() => {
                   <>
 
 
-                    <span className="text-muted-foreground">Marcador do canto</span>
+                    <span className="text-muted-foreground">Executante do canto</span>
 
 
                     <span>{currentPlayers.find((p) => p.id === cornerTakerId)?.name ?? "-"}</span>
@@ -3524,7 +3529,7 @@ const filteredChampionships = useMemo(() => {
                   <>
 
 
-                    <span className="text-muted-foreground">Marcador da falta</span>
+                    <span className="text-muted-foreground">Executante da falta</span>
 
 
                     <span>{currentPlayers.find((p) => p.id === freekickTakerId)?.name ?? "-"}</span>
@@ -3548,7 +3553,7 @@ const filteredChampionships = useMemo(() => {
                   <>
 
 
-                    <span className="text-muted-foreground">Marcador do penálti</span>
+                    <span className="text-muted-foreground">Executante do penálti</span>
 
 
                     <span>{currentPlayers.find((p) => p.id === penaltyTakerId)?.name ?? "-"}</span>
@@ -3643,7 +3648,7 @@ const filteredChampionships = useMemo(() => {
                       {currentPlayers.find((p) => p.id === inv.playerId)?.name ?? inv.playerId} /{" "}
 
 
-                      {inv.role === "assist" ? "assistência" : "envolvimento"}
+                      envolvido
 
 
                     </Badge>

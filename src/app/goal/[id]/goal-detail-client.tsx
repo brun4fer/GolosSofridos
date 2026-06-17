@@ -16,6 +16,11 @@ type GoalSubMomentSequenceDto = {
   actionName?: string | null;
   sequenceOrder: number;
 };
+type GoalInvolvementDto = {
+  playerId: number;
+  playerName?: string | null;
+  role?: string | null;
+};
 
 type GoalDetailProps = {
   goal: {
@@ -43,6 +48,7 @@ type GoalDetailProps = {
     opponentName?: string | null;
     teamName?: string | null;
     assistName?: string | null;
+    involvements?: GoalInvolvementDto[];
     cornerTakerName?: string | null;
     freekickTakerName?: string | null;
     penaltyTakerName?: string | null;
@@ -149,6 +155,13 @@ export default function GoalDetailContent({ goal }: GoalDetailProps) {
     });
   }, [goal.subMomentSequence]);
 
+  const involvedPlayerLabels = useMemo(() => {
+    const labels =
+      goal.involvements?.map((inv) => inv.playerName ?? `#${inv.playerId}`).filter(Boolean) ?? [];
+    if (labels.length > 0) return labels;
+    return [goal.scorerName ?? `#${goal.scorerId}`];
+  }, [goal.involvements, goal.scorerId, goal.scorerName]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -182,10 +195,8 @@ export default function GoalDetailContent({ goal }: GoalDetailProps) {
               <span>{goal.teamName ?? goal.teamId}</span>
               <span className="text-muted-foreground">Adversário</span>
               <span>{goal.opponentName ?? goal.opponentTeamId ?? "—"}</span>
-              <span className="text-muted-foreground">Marcador</span>
-              <span>{goal.scorerName ?? goal.scorerId}</span>
-              <span className="text-muted-foreground">Assistência</span>
-              <span>{goal.assistName ?? goal.assistId ?? "—"}</span>
+              <span className="text-muted-foreground">Jogadores envolvidos</span>
+              <span>{involvedPlayerLabels.join(", ")}</span>
               <span className="text-muted-foreground">Minuto</span>
               <span>
                 {goal.minute}
@@ -223,19 +234,19 @@ export default function GoalDetailContent({ goal }: GoalDetailProps) {
               </span>
               {goal.cornerTakerName && (
                 <>
-                  <span className="text-muted-foreground">Marcador do canto</span>
+                  <span className="text-muted-foreground">Executante do canto</span>
                   <span>{goal.cornerTakerName}</span>
                 </>
               )}
               {goal.freekickTakerName && (
                 <>
-                  <span className="text-muted-foreground">Marcador da falta</span>
+                  <span className="text-muted-foreground">Executante da falta</span>
                   <span>{goal.freekickTakerName}</span>
                 </>
               )}
               {goal.penaltyTakerName && (
                 <>
-                  <span className="text-muted-foreground">Marcador do penálti</span>
+                  <span className="text-muted-foreground">Executante do penálti</span>
                   <span>{goal.penaltyTakerName}</span>
                 </>
               )}

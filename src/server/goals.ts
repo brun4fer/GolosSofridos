@@ -612,9 +612,22 @@ async function upsertGoal(
     if (existingGoal.teamId !== parsed.teamId) throw new Error("Cannot move goal to another team");
   }
 
-  const [team, scorer, opponent, moment] = await Promise.all([
+  const submittedInvolvements = parsed.involvements ?? [];
+  const primaryPlayerId = submittedInvolvements[0]?.playerId ?? parsed.scorerId ?? null;
+  if (!primaryPlayerId) {
+    throw new Error("Seleciona pelo menos um jogador envolvido no golo sofrido");
+  }
+  const normalizedInvolvements =
+    submittedInvolvements.length > 0
+      ? submittedInvolvements.map((inv) => ({
+          playerId: inv.playerId,
+          role: "involvement" as const
+        }))
+      : [{ playerId: primaryPlayerId, role: "involvement" as const }];
+
+  const [team, primaryPlayer, opponent, moment] = await Promise.all([
     db.query.teams.findFirst({ where: eq(teams.id, parsed.teamId) }),
-    db.query.players.findFirst({ where: eq(players.id, parsed.scorerId) }),
+    db.query.players.findFirst({ where: eq(players.id, primaryPlayerId) }),
     db.query.teams.findFirst({ where: eq(teams.id, parsed.opponentTeamId) }),
     db.query.moments.findFirst({ where: eq(moments.id, parsed.momentId) })
   ]);
@@ -625,8 +638,8 @@ async function upsertGoal(
   if (team.championshipId && opponent.championshipId && team.championshipId !== opponent.championshipId) {
     throw new Error("Opponent must belong to the same championship");
   }
-  if (!scorer) throw new Error("Scorer not found");
-  if (scorer.teamId !== parsed.teamId) throw new Error("Scorer does not belong to team");
+  if (!primaryPlayer) throw new Error("Jogador envolvido nao encontrado");
+  if (primaryPlayer.teamId !== parsed.teamId) throw new Error("Jogador envolvido tem de pertencer a equipa");
   if (!moment) throw new Error("Moment not found");
 
   const orderedSequenceEntries = [...sequenceEntries].sort((a, b) => a.sequenceOrder - b.sequenceOrder);
@@ -714,15 +727,7 @@ async function upsertGoal(
     throw new Error("Esta acao requer selecionar um ponto na baliza.");
   }
 
-  const assistFromRoles = parsed.involvements?.filter((i) => i.role === "assist") ?? [];
-  if (assistFromRoles.length > 1) throw new Error("Only one assist is allowed per goal");
-
-  let assistId = parsed.assistId ?? assistFromRoles[0]?.playerId ?? null;
-  if (assistId) {
-    const assistPlayer = await db.query.players.findFirst({ where: eq(players.id, assistId) });
-    if (!assistPlayer) throw new Error("Assist player not found");
-    if (assistPlayer.teamId !== parsed.teamId) throw new Error("Assist player does not belong to team");
-  }
+  const assistId = null;
 
   const primarySequenceEntry = orderedSequenceEntries[orderedSequenceEntries.length - 1];
   const primarySubMoment = subMomentById.get(primarySequenceEntry.subMomentId);
@@ -756,15 +761,15 @@ async function upsertGoal(
   }
 
   const cornerTakerId = hasCornerMarkerAction
-    ? await validateTaker(parsed.cornerTakerId, "Marcador do canto")
+    ? await validateTaker(parsed.cornerTakerId, "Executante do canto")
     : parsed.cornerTakerId ?? null;
   const freekickTakerId = hasFreekickMarkerAction
-    ? await validateTaker(parsed.freekickTakerId, "Marcador da falta")
+    ? await validateTaker(parsed.freekickTakerId, "Executante da falta")
     : parsed.freekickTakerId ?? null;
-  const penaltyTakerId = isPenalty ? await validateTaker(parsed.penaltyTakerId, "Marcador do penalti") : parsed.penaltyTakerId ?? null;
+  const penaltyTakerId = isPenalty ? await validateTaker(parsed.penaltyTakerId, "Executante do penalti") : parsed.penaltyTakerId ?? null;
   const crossAuthorId = isCross ? await validateTaker(parsed.crossAuthorId, "Autor do cruzamento") : parsed.crossAuthorId ?? null;
   const throwInTakerId = supportsThrowInTaker && hasThrowInMarkerAction
-    ? await validateTaker(parsed.throwInTakerId, "Marcador do lancamento")
+    ? await validateTaker(parsed.throwInTakerId, "Executante do lancamento")
     : null;
   const referencePlayerId = supportsReferencePlayer && parsed.referencePlayerId
     ? await validateTaker(parsed.referencePlayerId, "Jogador referencia")
@@ -774,14 +779,14 @@ async function upsertGoal(
     : null;
   const previousMomentDescription = parsed.previousMomentDescription?.toString().trim() || null;
 
-  if (parsed.involvements) {
+  if (normalizedInvolvements.length > 0) {
     const duplicateRole = new Set<string>();
-    for (const inv of parsed.involvements) {
+    for (const inv of normalizedInvolvements) {
       const key = `${inv.playerId}-${inv.role}`;
       if (duplicateRole.has(key)) throw new Error("Duplicate player role in involvements");
       duplicateRole.add(key);
     }
-    const ids = [...new Set(parsed.involvements.map((i) => i.playerId))];
+    const ids = [...new Set(normalizedInvolvements.map((i) => i.playerId))];
     if (ids.length > 0) {
       const involvementPlayers = await db
         .select({ id: players.id, teamId: players.teamId })
@@ -797,7 +802,7 @@ async function upsertGoal(
     const goalValues: any = {
       opponentTeamId: parsed.opponentTeamId,
       teamId: parsed.teamId,
-      scorerId: parsed.scorerId,
+      scorerId: primaryPlayerId,
       assistId,
       minute: parsed.minute,
       momentId: parsed.momentId,
@@ -851,9 +856,9 @@ async function upsertGoal(
     }
 
     await tx.delete(goalInvolvements).where(eq(goalInvolvements.goalId, currentGoalId));
-    if (parsed.involvements && parsed.involvements.length > 0) {
+    if (normalizedInvolvements.length > 0) {
       await tx.insert(goalInvolvements).values(
-        parsed.involvements.map((inv) => ({
+        normalizedInvolvements.map((inv) => ({
           goalId: currentGoalId,
           playerId: inv.playerId,
           role: inv.role

@@ -14,7 +14,7 @@ export default function HomePage() {
               Inteligência tática, construída sobre dados de eventos em tempo real.
             </h1>
             <p className="max-w-2xl text-sm text-muted-foreground">
-              Regista golos com contexto estruturado, gere plantéis e obtém insights de alto valor sem depender de estatísticas pré-computadas.
+              Regista golos sofridos com contexto estruturado, gere plantéis e obtém insights de alto valor sem depender de estatísticas pré-computadas.
             </p>
             <div className="flex flex-wrap gap-3">
               <Badge className="bg-emerald-500/20 text-emerald-200">UI Dark Ops</Badge>
@@ -24,7 +24,7 @@ export default function HomePage() {
           </div>
           <div className="flex gap-3">
             <Link href="/goals">
-              <Button size="lg">Registar Golo</Button>
+              <Button size="lg">Registar Golo Sofrido</Button>
             </Link>
             <Link href="/teams">
               <Button variant="secondary" size="lg">
@@ -37,9 +37,9 @@ export default function HomePage() {
 
       <div className="grid gap-5 md:grid-cols-2">
         <Card>
-          <CardHeader title="Wizard de Golo" description="Fluxo guiado para registar eventos de forma consistente" />
+          <CardHeader title="Wizard de Golo Sofrido" description="Fluxo guiado para registar eventos de forma consistente" />
           <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>Equipa → marcador → participações → contexto tático → zona da baliza com validação em tempo real.</p>
+            <p>Equipa &gt; jogadores envolvidos &gt; contexto tático &gt; zona da baliza com validação em tempo real.</p>
             <Link href="/goals">
               <Button size="sm" className="mt-2">
                 Abrir Wizard
