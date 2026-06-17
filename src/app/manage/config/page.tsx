@@ -46,6 +46,10 @@ export default function ConfigPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["seasons"] });
       qc.invalidateQueries({ queryKey: ["championships"] });
+      qc.invalidateQueries({ queryKey: ["lookups"], exact: false });
+      qc.invalidateQueries({ queryKey: ["teams-lookups"], exact: false });
+      qc.invalidateQueries({ queryKey: ["teams"], exact: false });
+      qc.invalidateQueries({ queryKey: ["manage-teams"], exact: false });
       setSeasonForm({ name: "", description: "" });
       setEditingSeason(null);
     }
@@ -56,6 +60,10 @@ export default function ConfigPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["seasons"] });
       qc.invalidateQueries({ queryKey: ["championships"] });
+      qc.invalidateQueries({ queryKey: ["lookups"], exact: false });
+      qc.invalidateQueries({ queryKey: ["teams-lookups"], exact: false });
+      qc.invalidateQueries({ queryKey: ["teams"], exact: false });
+      qc.invalidateQueries({ queryKey: ["manage-teams"], exact: false });
     }
   });
 
@@ -71,6 +79,10 @@ export default function ConfigPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["championships"] });
+      qc.invalidateQueries({ queryKey: ["lookups"], exact: false });
+      qc.invalidateQueries({ queryKey: ["teams-lookups"], exact: false });
+      qc.invalidateQueries({ queryKey: ["teams"], exact: false });
+      qc.invalidateQueries({ queryKey: ["manage-teams"], exact: false });
       setChampForm({ name: "", country: "", seasonId: champForm.seasonId, logo: "" });
       setEditingChamp(null);
     }
@@ -78,7 +90,13 @@ export default function ConfigPage() {
 
   const deleteChamp = useMutation({
     mutationFn: (id: number) => fetchJson(`/api/manage/championships/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["championships"] })
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["championships"] });
+      qc.invalidateQueries({ queryKey: ["lookups"], exact: false });
+      qc.invalidateQueries({ queryKey: ["teams-lookups"], exact: false });
+      qc.invalidateQueries({ queryKey: ["teams"], exact: false });
+      qc.invalidateQueries({ queryKey: ["manage-teams"], exact: false });
+    }
   });
 
   return (

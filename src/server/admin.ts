@@ -2,6 +2,7 @@ import { db } from "../db/client";
 import { championships, players, teams, seasons } from "../schema/schema";
 import { eq, asc } from "drizzle-orm";
 import { championshipUpsertSchema, playerUpsertSchema, seasonUpsertSchema, teamUpsertSchema } from "../lib/validation";
+import { ensurePlayerProfileColumns, ensureTeamMetadataColumns } from "./schema-maintenance";
 
 export async function listChampionships() {
   return db.select().from(championships).orderBy(asc(championships.name));
@@ -12,11 +13,16 @@ export async function listSeasons() {
 }
 
 export async function listTeamsWithMeta() {
+  await ensureTeamMetadataColumns();
+
   return db
     .select({
       id: teams.id,
       name: teams.name,
       championshipId: teams.championshipId,
+      championshipName: championships.name,
+      seasonId: championships.seasonId,
+      seasonName: seasons.name,
       emblemPath: teams.emblemPath,
       radiographyPdfUrl: teams.radiographyPdfUrl,
       videoReportUrl: teams.videoReportUrl,
@@ -26,11 +32,21 @@ export async function listTeamsWithMeta() {
       pitchRating: teams.pitchRating
     })
     .from(teams)
+    .innerJoin(championships, eq(teams.championshipId, championships.id))
+    .innerJoin(seasons, eq(championships.seasonId, seasons.id))
     .orderBy(asc(teams.name));
 }
 
 export async function createTeam(payload: unknown) {
+  await ensureTeamMetadataColumns();
+
   const data = teamUpsertSchema.parse(payload);
+  const championship = await db.query.championships.findFirst({
+    where: eq(championships.id, data.championshipId)
+  });
+  if (!championship) throw new Error("Campeonato nao encontrado.");
+  if (!championship.seasonId) throw new Error("O campeonato selecionado nao esta associado a nenhuma epoca.");
+
   const [created] = await db
     .insert(teams)
     .values({
@@ -46,11 +62,20 @@ export async function createTeam(payload: unknown) {
       president: data.president || null
     })
     .returning();
+  if (!created) throw new Error("Nao foi possivel criar a equipa.");
   return created;
 }
 
 export async function updateTeam(id: number, payload: unknown) {
+  await ensureTeamMetadataColumns();
+
   const data = teamUpsertSchema.parse(payload);
+  const championship = await db.query.championships.findFirst({
+    where: eq(championships.id, data.championshipId)
+  });
+  if (!championship) throw new Error("Campeonato nao encontrado.");
+  if (!championship.seasonId) throw new Error("O campeonato selecionado nao esta associado a nenhuma epoca.");
+
   const [updated] = await db
     .update(teams)
     .set({
@@ -67,6 +92,7 @@ export async function updateTeam(id: number, payload: unknown) {
     })
     .where(eq(teams.id, id))
     .returning();
+  if (!updated) throw new Error("Equipa nao encontrada.");
   return updated;
 }
 
@@ -92,20 +118,28 @@ export async function deleteSeason(id: number) {
 
 export async function createChampionship(payload: unknown) {
   const data = championshipUpsertSchema.parse(payload);
+  const season = await db.query.seasons.findFirst({ where: eq(seasons.id, data.seasonId) });
+  if (!season) throw new Error("Epoca nao encontrada.");
+
   const [created] = await db
     .insert(championships)
     .values({ name: data.name, country: data.country, seasonId: data.seasonId, logo: data.logo || null })
     .returning();
+  if (!created) throw new Error("Nao foi possivel criar o campeonato.");
   return created;
 }
 
 export async function updateChampionship(id: number, payload: unknown) {
   const data = championshipUpsertSchema.parse(payload);
+  const season = await db.query.seasons.findFirst({ where: eq(seasons.id, data.seasonId) });
+  if (!season) throw new Error("Epoca nao encontrada.");
+
   const [updated] = await db
     .update(championships)
     .set({ name: data.name, country: data.country, seasonId: data.seasonId, logo: data.logo || null })
     .where(eq(championships.id, id))
     .returning();
+  if (!updated) throw new Error("Campeonato nao encontrado.");
   return updated;
 }
 
@@ -114,6 +148,8 @@ export async function deleteChampionship(id: number) {
 }
 
 export async function listPlayersWithTeams(teamId?: number) {
+  await ensurePlayerProfileColumns();
+
   const baseQuery = db
     .select({
       id: players.id,
@@ -135,6 +171,8 @@ export async function listPlayersWithTeams(teamId?: number) {
 }
 
 export async function createPlayer(payload: unknown) {
+  await ensurePlayerProfileColumns();
+
   const data = playerUpsertSchema.parse(payload);
   const [created] = await db
     .insert(players)
@@ -154,6 +192,8 @@ export async function createPlayer(payload: unknown) {
 }
 
 export async function updatePlayer(id: number, payload: unknown) {
+  await ensurePlayerProfileColumns();
+
   const data = playerUpsertSchema.parse(payload);
   const [updated] = await db
     .update(players)

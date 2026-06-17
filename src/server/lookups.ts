@@ -1,6 +1,7 @@
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "../db/client";
 import { moments, subMoments, actions, championships, teams, seasons } from "../schema/schema";
+import { ensureActionsContextColumn, ensureTeamMetadataColumns } from "./schema-maintenance";
 
 const normalizeToken = (value: string) =>
   value
@@ -46,11 +47,24 @@ async function ensureOffensiveOrganizationLaunchAction(params: {
 }
 
 export async function getLookups() {
+  await ensureActionsContextColumn();
+  await ensureTeamMetadataColumns();
+
   const [momentsRows, subMomentRows, championshipRows, teamRows, seasonRows] = await Promise.all([
     db.select().from(moments).orderBy(asc(moments.name)),
     db.select().from(subMoments).orderBy(asc(subMoments.name)),
     db.select().from(championships).orderBy(asc(championships.name)),
-    db.select().from(teams).orderBy(asc(teams.name)),
+    db
+      .select({
+        id: teams.id,
+        name: teams.name,
+        championshipId: teams.championshipId,
+        championshipName: championships.name,
+        seasonId: championships.seasonId
+      })
+      .from(teams)
+      .innerJoin(championships, eq(teams.championshipId, championships.id))
+      .orderBy(asc(teams.name)),
     db.select().from(seasons).orderBy(asc(seasons.name))
   ]);
 

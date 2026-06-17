@@ -13,6 +13,9 @@ type Team = {
   id: number;
   name: string;
   championshipId: number;
+  championshipName?: string | null;
+  seasonId?: number | null;
+  seasonName?: string | null;
   emblemPath?: string | null;
   radiographyPdfUrl?: string | null;
   videoReportUrl?: string | null;
@@ -66,16 +69,60 @@ export default function ManageTeamsPage() {
     setTeamPage(0);
   }, [teamsQuery.data?.length, filterChampionshipId]);
 
-  const championships = lookupsQuery.data?.championships ?? [];
-  const seasons = lookupsQuery.data?.seasons ?? [];
+  const championships = useMemo(() => lookupsQuery.data?.championships ?? [], [lookupsQuery.data?.championships]);
+  const seasons = useMemo(() => lookupsQuery.data?.seasons ?? [], [lookupsQuery.data?.seasons]);
 
   const championshipMap = useMemo(() => new Map(championships.map((c) => [c.id, c])), [championships]);
   const seasonMap = useMemo(() => new Map(seasons.map((s) => [s.id, s.name])), [seasons]);
   const teamPageCount = Math.ceil((teamsQuery.data?.length ?? 0) / TEAM_PAGE_LIMIT);
   const visibleTeams = (teamsQuery.data ?? []).slice(teamPage * TEAM_PAGE_LIMIT, (teamPage + 1) * TEAM_PAGE_LIMIT);
 
-  const filteredChampsForFilters = championships.filter((c) => (!filterSeasonId ? true : c.seasonId === Number(filterSeasonId)));
-  const filteredChampsForForm = championships.filter((c) => (!formSeasonId ? true : c.seasonId === Number(formSeasonId)));
+  const filteredChampsForFilters = useMemo(
+    () => championships.filter((c) => (!filterSeasonId ? true : c.seasonId === Number(filterSeasonId))),
+    [championships, filterSeasonId]
+  );
+  const filteredChampsForForm = useMemo(
+    () => championships.filter((c) => (!formSeasonId ? true : c.seasonId === Number(formSeasonId))),
+    [championships, formSeasonId]
+  );
+
+  useEffect(() => {
+    if (!formSeasonId && seasons.length === 1) {
+      setFormSeasonId(String(seasons[0].id));
+      return;
+    }
+
+    if (!formSeasonId) return;
+
+    const currentChampionshipIsValid = filteredChampsForForm.some((c) => String(c.id) === form.championshipId);
+    if (form.championshipId && !currentChampionshipIsValid) {
+      setForm((current) => ({ ...current, championshipId: "" }));
+      return;
+    }
+
+    if (!form.championshipId && filteredChampsForForm.length === 1) {
+      setForm((current) => ({ ...current, championshipId: String(filteredChampsForForm[0].id) }));
+    }
+  }, [filteredChampsForForm, form.championshipId, formSeasonId, seasons]);
+
+  useEffect(() => {
+    if (!filterSeasonId && seasons.length === 1) {
+      setFilterSeasonId(String(seasons[0].id));
+      return;
+    }
+
+    if (!filterSeasonId) return;
+
+    const currentChampionshipIsValid = filteredChampsForFilters.some((c) => String(c.id) === filterChampionshipId);
+    if (filterChampionshipId && !currentChampionshipIsValid) {
+      setFilterChampionshipId("");
+      return;
+    }
+
+    if (!filterChampionshipId && filteredChampsForFilters.length === 1) {
+      setFilterChampionshipId(String(filteredChampsForFilters[0].id));
+    }
+  }, [filterChampionshipId, filteredChampsForFilters, filterSeasonId, seasons]);
 
   const saveTeam = useMutation({
     mutationFn: async () => {
@@ -90,7 +137,7 @@ export default function ManageTeamsPage() {
         pitchRating: form.pitchRating ? Number(form.pitchRating) : undefined,
         coach: form.coach
       };
-      if (!body.championshipId) throw new Error("Championship required");
+      if (!body.championshipId) throw new Error("Seleciona uma época e um campeonato.");
       if (editingId) {
         await fetchJson(`/api/manage/teams/${editingId}`, {
           method: "PUT",
@@ -107,6 +154,11 @@ export default function ManageTeamsPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["manage-teams"], exact: false });
+      qc.invalidateQueries({ queryKey: ["teams"], exact: false });
+      qc.invalidateQueries({ queryKey: ["lookups"], exact: false });
+      qc.invalidateQueries({ queryKey: ["teams-lookups"], exact: false });
+      setFilterSeasonId(formSeasonId);
+      setFilterChampionshipId(form.championshipId);
       setForm({
         name: "",
         championshipId: form.championshipId,
@@ -125,7 +177,12 @@ export default function ManageTeamsPage() {
 
   const deleteTeam = useMutation({
     mutationFn: (id: number) => fetchJson(`/api/manage/teams/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["manage-teams"], exact: false })
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["manage-teams"], exact: false });
+      qc.invalidateQueries({ queryKey: ["teams"], exact: false });
+      qc.invalidateQueries({ queryKey: ["lookups"], exact: false });
+      qc.invalidateQueries({ queryKey: ["teams-lookups"], exact: false });
+    }
   });
 
   return (
@@ -223,7 +280,7 @@ export default function ManageTeamsPage() {
                 Cancelar
               </Button>
             )}
-            <Button type="button" onClick={() => saveTeam.mutate()} disabled={!form.name || !form.championshipId || saveTeam.isPending}>
+            <Button type="button" onClick={() => saveTeam.mutate()} disabled={!form.name || !formSeasonId || !form.championshipId || saveTeam.isPending}>
               {saveTeam.isPending ? "A guardar..." : editingId ? "Atualizar" : "Criar"}
             </Button>
           </div>
@@ -285,8 +342,10 @@ export default function ManageTeamsPage() {
                       <div className="flex flex-col">
                       <span className="font-medium text-white">{team.name}</span>
                       <span className="text-xs text-muted-foreground">
-                        {champ?.name ?? `Campeonato #${team.championshipId}`}
-                        {champ?.seasonId && seasonMap.get(champ.seasonId) ? ` · ${seasonMap.get(champ.seasonId)}` : ""}
+                        {team.championshipName ?? champ?.name ?? `Campeonato #${team.championshipId}`}
+                        {(team.seasonName ?? (champ?.seasonId ? seasonMap.get(champ.seasonId) : null))
+                          ? ` · ${team.seasonName ?? seasonMap.get(champ?.seasonId ?? 0)}`
+                          : ""}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">

@@ -18,6 +18,7 @@ export const championships = pgTable(
   {
     id: bigserial("id", { mode: "number" }).primaryKey(),
     seasonId: bigint("season_id", { mode: "number" })
+      .notNull()
       .references(() => seasons.id, { onDelete: "cascade" }),
     country: text("country").notNull(),
     name: text("name").notNull(),
@@ -33,6 +34,7 @@ export const teams = pgTable(
   {
     id: bigserial("id", { mode: "number" }).primaryKey(),
     championshipId: bigint("championship_id", { mode: "number" })
+      .notNull()
       .references(() => championships.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     emblemPath: text("emblem_path"),

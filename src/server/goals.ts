@@ -3,6 +3,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { db } from "../db/client";
 import { actions, goalActions, goals, goalInvolvements, goalSubMomentActions, moments, players, subMoments, teams } from "../schema/schema";
 import { goalInputSchema } from "../lib/validation";
+import { ensureActionsContextColumn, ensurePlayerProfileColumns, ensureTeamMetadataColumns } from "./schema-maintenance";
 
 type RawGoalPayload = Record<string, unknown>;
 
@@ -410,6 +411,9 @@ export async function getGoalsByTeam(teamId: number) {
 }
 
 export async function getGoalById(goalId: number) {
+  await ensurePlayerProfileColumns();
+  await ensureTeamMetadataColumns();
+
   const [supportsAssistDrawing, supportsTransitionDrawing, supportsAttackingSpace, supportsGoalSubMomentActions] = await Promise.all([
     hasGoalsColumn("assist_drawing"),
     hasGoalsColumn("transition_drawing"),
@@ -577,6 +581,9 @@ async function upsertGoal(
   payload: unknown,
   existingGoalId?: number
 ) {
+  await ensureActionsContextColumn();
+  await ensurePlayerProfileColumns();
+  await ensureTeamMetadataColumns();
   await ensureGoalsDrawingColumns();
   await ensureGoalSubMomentActionsTable();
   const normalized = await normalizeGoalPayload((payload ?? {}) as RawGoalPayload);
