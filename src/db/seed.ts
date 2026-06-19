@@ -96,7 +96,6 @@ const MOMENT_SEEDS: MomentSeed[] = [
       {
         name: "Lan\u00e7amento Lateral",
         actions: [
-          { name: "Marcador do lan\u00e7amento", context: "field_goal" },
           { name: "Lan\u00e7amento para a \u00e1rea", context: "field" },
           { name: "Passagem para organiza\u00e7\u00e3o", context: "field" },
           { name: "Jogador Refer\u00eancia", context: "field" }
@@ -105,7 +104,6 @@ const MOMENT_SEEDS: MomentSeed[] = [
       {
         name: "Canto",
         actions: [
-          { name: "Marcador do canto", context: "field_goal" },
           { name: "Canto aberto", context: "field" },
           { name: "Canto fechado", context: "field" },
           { name: "Canto combinado", context: "field" },
@@ -115,7 +113,6 @@ const MOMENT_SEEDS: MomentSeed[] = [
       {
         name: "Livre",
         actions: [
-          { name: "Marcador da falta", context: "field_goal" },
           { name: "Livre aberto", context: "field" },
           { name: "Livre fechado", context: "field" },
           { name: "Livre combinado", context: "field" },
@@ -127,7 +124,6 @@ const MOMENT_SEEDS: MomentSeed[] = [
       {
         name: "Livre Direto",
         actions: [
-          { name: "Marcador da falta", context: "field_goal" },
           { name: "Falta sobre", context: "field" },
           { name: "Momento anterior", context: "field" },
           { name: "Jogador Refer\u00eancia", context: "field" }
@@ -136,7 +132,6 @@ const MOMENT_SEEDS: MomentSeed[] = [
       {
         name: "Pen\u00e1lti",
         actions: [
-          { name: "Marcador do pen\u00e1lti", context: "field_goal" },
           { name: "Falta sobre", context: "field" },
           { name: "Momento anterior", context: "field" },
           { name: "Jogador Refer\u00eancia", context: "field" }

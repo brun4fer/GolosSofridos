@@ -57,16 +57,16 @@ const seeds = [
       { name: "Penalty", actions: ["Falta sobre", "Momento anterior"] },
       {
         name: "Livre",
-        actions: ["Aberto", "Fechado", "Combinado", "Marcador da falta", "Jogador Referência"]
+        actions: ["Aberto", "Fechado", "Combinado", "Jogador Referência"]
       },
       {
         name: "Canto",
-        actions: ["Aberto", "Fechado", "Combinado", "Marcador do canto", "Jogador Referência"]
+        actions: ["Aberto", "Fechado", "Combinado", "Jogador Referência"]
       },
-      { name: "Livre Direto", actions: ["Falta sobre", "Momento anterior", "Marcador da falta", "Jogador Referência"] },
+      { name: "Livre Direto", actions: ["Falta sobre", "Momento anterior", "Jogador Referência"] },
       {
         name: "Lançamento Lateral",
-        actions: ["Lançamento para a área", "Passagem para organização", "Marcador do lançamento", "Jogador Referência"]
+        actions: ["Lançamento para a área", "Passagem para organização", "Jogador Referência"]
       }
     ]
   }
@@ -128,7 +128,7 @@ async function normalizeExistingNames() {
 
 async function main() {
   await normalizeExistingNames();
-  const contextFor = (name) => (name.toLowerCase().includes("marcador") ? "field_goal" : "field");
+  const contextFor = () => "field";
 
   for (const m of seeds) {
     const momentId = await upsertMoment(m.name);

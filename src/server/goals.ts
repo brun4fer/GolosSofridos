@@ -82,13 +82,128 @@ async function hasGoalSubMomentActionsTable() {
   return hasTable("goal_sub_moment_actions");
 }
 
-async function ensureGoalsDrawingColumns() {
+async function ensureGoalsStorageSchema() {
   try {
-    await db.execute(sql`ALTER TABLE "goals" ADD COLUMN IF NOT EXISTS "assist_drawing" jsonb`);
-    await db.execute(sql`ALTER TABLE "goals" ADD COLUMN IF NOT EXISTS "transition_drawing" jsonb`);
-    await db.execute(sql`ALTER TABLE "goals" ADD COLUMN IF NOT EXISTS "attacking_space_id" integer`);
+    await db.execute(sql`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = ANY(current_schemas(false))
+            AND table_name = 'goals'
+            AND column_name = 'match_id'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = ANY(current_schemas(false))
+            AND table_name = 'goals'
+            AND column_name = 'opponent_team_id'
+        ) THEN
+          ALTER TABLE "goals" DROP CONSTRAINT IF EXISTS "goals_match_id_matches_id_fk";
+          ALTER TABLE "goals" DROP CONSTRAINT IF EXISTS "goals_match_id_fkey";
+          ALTER TABLE "goals" RENAME COLUMN "match_id" TO "opponent_team_id";
+        END IF;
+
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = ANY(current_schemas(false))
+            AND table_name = 'goals'
+            AND column_name = 'video_url'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = ANY(current_schemas(false))
+            AND table_name = 'goals'
+            AND column_name = 'video_path'
+        ) THEN
+          ALTER TABLE "goals" RENAME COLUMN "video_url" TO "video_path";
+        END IF;
+      END $$;
+    `);
+
+    await db.execute(sql`
+      ALTER TABLE "goals"
+        ADD COLUMN IF NOT EXISTS "opponent_team_id" bigint,
+        ADD COLUMN IF NOT EXISTS "assist_id" bigint,
+        ADD COLUMN IF NOT EXISTS "video_path" text,
+        ADD COLUMN IF NOT EXISTS "corner_taker_id" bigint,
+        ADD COLUMN IF NOT EXISTS "freekick_taker_id" bigint,
+        ADD COLUMN IF NOT EXISTS "penalty_taker_id" bigint,
+        ADD COLUMN IF NOT EXISTS "cross_author_id" bigint,
+        ADD COLUMN IF NOT EXISTS "throw_in_taker_id" bigint,
+        ADD COLUMN IF NOT EXISTS "reference_player_id" bigint,
+        ADD COLUMN IF NOT EXISTS "foul_suffered_by_id" bigint,
+        ADD COLUMN IF NOT EXISTS "previous_moment_description" text,
+        ADD COLUMN IF NOT EXISTS "field_drawing" jsonb,
+        ADD COLUMN IF NOT EXISTS "assist_coordinates" jsonb,
+        ADD COLUMN IF NOT EXISTS "assist_drawing" jsonb,
+        ADD COLUMN IF NOT EXISTS "transition_drawing" jsonb,
+        ADD COLUMN IF NOT EXISTS "attacking_space_id" integer,
+        ADD COLUMN IF NOT EXISTS "assist_sector" text,
+        ADD COLUMN IF NOT EXISTS "shot_sector" text,
+        ADD COLUMN IF NOT EXISTS "finish_sector" text,
+        ADD COLUMN IF NOT EXISTS "corner_profile" text,
+        ADD COLUMN IF NOT EXISTS "freekick_profile" text,
+        ADD COLUMN IF NOT EXISTS "throw_in_profile" text,
+        ADD COLUMN IF NOT EXISTS "goalkeeper_outlet" text
+    `);
+
+    await db.execute(sql`ALTER TABLE "goals" ALTER COLUMN "goal_zone_id" DROP NOT NULL`);
+
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS "idx_goals_opponent" ON "goals" ("opponent_team_id")`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS "idx_goals_assist" ON "goals" ("assist_id")`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS "idx_goals_corner_taker" ON "goals" ("corner_taker_id")`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS "idx_goals_freekick_taker" ON "goals" ("freekick_taker_id")`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS "idx_goals_penalty_taker" ON "goals" ("penalty_taker_id")`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS "idx_goals_cross_author" ON "goals" ("cross_author_id")`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS "idx_goals_throw_in_taker" ON "goals" ("throw_in_taker_id")`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS "idx_goals_reference_player" ON "goals" ("reference_player_id")`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS "idx_goals_foul_suffered_by" ON "goals" ("foul_suffered_by_id")`);
+
+    await db.execute(sql`ALTER TABLE "goals" DROP CONSTRAINT IF EXISTS "goals_corner_profile_check"`);
+    await db.execute(sql`
+      ALTER TABLE "goals" ADD CONSTRAINT "goals_corner_profile_check"
+      CHECK ("corner_profile" IS NULL OR "corner_profile" IN ('fechado','aberto','combinado')) NOT VALID
+    `);
+    await db.execute(sql`ALTER TABLE "goals" DROP CONSTRAINT IF EXISTS "goals_freekick_profile_check"`);
+    await db.execute(sql`
+      ALTER TABLE "goals" ADD CONSTRAINT "goals_freekick_profile_check"
+      CHECK ("freekick_profile" IS NULL OR "freekick_profile" IN ('fechado','aberto','combinado')) NOT VALID
+    `);
+    await db.execute(sql`ALTER TABLE "goals" DROP CONSTRAINT IF EXISTS "goals_throw_in_profile_check"`);
+    await db.execute(sql`
+      ALTER TABLE "goals" ADD CONSTRAINT "goals_throw_in_profile_check"
+      CHECK ("throw_in_profile" IS NULL OR "throw_in_profile" IN ('area','organizacao')) NOT VALID
+    `);
+    await db.execute(sql`ALTER TABLE "goals" DROP CONSTRAINT IF EXISTS "goals_goalkeeper_outlet_check"`);
+    await db.execute(sql`
+      ALTER TABLE "goals" ADD CONSTRAINT "goals_goalkeeper_outlet_check"
+      CHECK ("goalkeeper_outlet" IS NULL OR "goalkeeper_outlet" IN ('organizacao','curto_para_longo','bola_longa')) NOT VALID
+    `);
   } catch {
     // Se nÃ£o for possÃ­vel alterar schema em runtime, o fluxo segue e o erro original serÃ¡ devolvido no insert/update.
+  }
+}
+
+async function ensureGoalActionsTable() {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS "goal_actions" (
+        "id" bigserial PRIMARY KEY NOT NULL,
+        "goal_id" bigint NOT NULL REFERENCES "goals"("id") ON DELETE CASCADE,
+        "action_id" bigint NOT NULL REFERENCES "actions"("id") ON DELETE CASCADE
+      )
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS "goal_actions_goal_action_key" ON "goal_actions" ("goal_id","action_id")`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS "idx_goal_actions_goal" ON "goal_actions" ("goal_id")`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS "idx_goal_actions_action" ON "goal_actions" ("action_id")`);
+    await db.execute(sql`
+      INSERT INTO "goal_actions" ("goal_id", "action_id")
+      SELECT g."id", g."action_id"
+      FROM "goals" g
+      WHERE g."action_id" IS NOT NULL
+      ON CONFLICT ("goal_id", "action_id") DO NOTHING
+    `);
+  } catch {
+    // Se nao for possivel alterar schema em runtime, o fluxo segue e o erro original sera devolvido no insert/update.
   }
 }
 
@@ -252,6 +367,13 @@ function isOffensiveOrganizationMomentName(value: string) {
 }
 
 export async function getGoalsByTeam(teamId: number) {
+  await ensureActionsContextColumn();
+  await ensurePlayerProfileColumns();
+  await ensureTeamMetadataColumns();
+  await ensureGoalsStorageSchema();
+  await ensureGoalActionsTable();
+  await ensureGoalSubMomentActionsTable();
+
   const [supportsAssistDrawing, supportsTransitionDrawing, supportsAttackingSpace, supportsGoalSubMomentActions] = await Promise.all([
     hasGoalsColumn("assist_drawing"),
     hasGoalsColumn("transition_drawing"),
@@ -411,8 +533,12 @@ export async function getGoalsByTeam(teamId: number) {
 }
 
 export async function getGoalById(goalId: number) {
+  await ensureActionsContextColumn();
   await ensurePlayerProfileColumns();
   await ensureTeamMetadataColumns();
+  await ensureGoalsStorageSchema();
+  await ensureGoalActionsTable();
+  await ensureGoalSubMomentActionsTable();
 
   const [supportsAssistDrawing, supportsTransitionDrawing, supportsAttackingSpace, supportsGoalSubMomentActions] = await Promise.all([
     hasGoalsColumn("assist_drawing"),
@@ -584,7 +710,8 @@ async function upsertGoal(
   await ensureActionsContextColumn();
   await ensurePlayerProfileColumns();
   await ensureTeamMetadataColumns();
-  await ensureGoalsDrawingColumns();
+  await ensureGoalsStorageSchema();
+  await ensureGoalActionsTable();
   await ensureGoalSubMomentActionsTable();
   const normalized = await normalizeGoalPayload((payload ?? {}) as RawGoalPayload);
   const parsed = goalInputSchema.parse(normalized);
@@ -723,9 +850,7 @@ async function upsertGoal(
     throw new Error("Transicao Ofensiva de recuperacao requer attackingSpaceId.");
   }
 
-  const requiresGoal = requestedActionRows.some(
-    (action) => action.context === "field_goal" || action.name.toLowerCase().includes("marcador")
-  );
+  const requiresGoal = requestedActionRows.some((action) => action.context === "field_goal");
   const requiresField = requestedActionRows.length > 0;
   if (requiresField && !parsed.fieldDrawing) {
     throw new Error("Esta acao requer marcar o ponto no campo (field drawing obrigatorio).");
@@ -744,14 +869,7 @@ async function upsertGoal(
   const actionNames = requestedActionRows.map((action) => normalizeToken(action.name));
   const isCorner = subName.includes("canto");
   const isFreeKick = subName.includes("livre");
-  const isPenalty = subName.includes("penal");
   const isThrowIn = subName.includes("lancamento");
-  const isCross = actionNames.some((name) => name.includes("cruzamento"));
-  const hasCornerMarkerAction = actionNames.some((name) => name.includes("marcador") && name.includes("canto"));
-  const hasFreekickMarkerAction = actionNames.some(
-    (name) => name.includes("marcador") && (name.includes("livre") || name.includes("falta"))
-  );
-  const hasThrowInMarkerAction = actionNames.some((name) => name.includes("marcador") && name.includes("lancamento"));
   const hasFoulSufferedAction = actionNames.some(
     (name) =>
       name.includes("falta sobre") ||
@@ -767,17 +885,11 @@ async function upsertGoal(
     return p.id;
   }
 
-  const cornerTakerId = hasCornerMarkerAction
-    ? await validateTaker(parsed.cornerTakerId, "Executante do canto")
-    : parsed.cornerTakerId ?? null;
-  const freekickTakerId = hasFreekickMarkerAction
-    ? await validateTaker(parsed.freekickTakerId, "Executante da falta")
-    : parsed.freekickTakerId ?? null;
-  const penaltyTakerId = isPenalty ? await validateTaker(parsed.penaltyTakerId, "Executante do penalti") : parsed.penaltyTakerId ?? null;
-  const crossAuthorId = isCross ? await validateTaker(parsed.crossAuthorId, "Autor do cruzamento") : parsed.crossAuthorId ?? null;
-  const throwInTakerId = supportsThrowInTaker && hasThrowInMarkerAction
-    ? await validateTaker(parsed.throwInTakerId, "Executante do lancamento")
-    : null;
+  const cornerTakerId = null;
+  const freekickTakerId = null;
+  const penaltyTakerId = null;
+  const crossAuthorId = null;
+  const throwInTakerId = null;
   const referencePlayerId = supportsReferencePlayer && parsed.referencePlayerId
     ? await validateTaker(parsed.referencePlayerId, "Jogador referencia")
     : null;
@@ -888,6 +1000,10 @@ export async function updateGoal(id: number, payload: unknown) {
 }
 
 export async function deleteGoal(goalId: number) {
+  await ensureGoalsStorageSchema();
+  await ensureGoalActionsTable();
+  await ensureGoalSubMomentActionsTable();
+
   const existingGoal = await db.query.goals.findFirst({
     where: eq(goals.id, goalId),
     columns: { id: true }

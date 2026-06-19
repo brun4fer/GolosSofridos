@@ -114,6 +114,11 @@ const hiddenActionNames = new Set([
   "unidades de ligação"
 ]);
 
+const isHiddenActionName = (name: string) => {
+  const normalized = normalizeActionName(name);
+  return hiddenActionNames.has(normalized) || normalized.includes("marcador");
+};
+
 const recoveryActionWhitelist = new Set([
   "cruzamento direita",
   "cruzamento esquerda",
@@ -1126,7 +1131,7 @@ const lookupsQuery = useQuery({ queryKey: ["lookups"], queryFn: () => fetchJson<
     if (!seasonId || !championshipId) throw new Error("Selecione época e campeonato.");
 
     const selectedActions = lookupsQuery.data?.actions.filter((a) => effectiveActionIds.includes(a.id)) ?? [];
-    const requiresGoal = selectedActions.some((a) => a.name.toLowerCase().includes("marcador") || a.context === "field_goal");
+    const requiresGoal = selectedActions.some((a) => a.context === "field_goal");
     const requiresField = selectedActions.length > 0;
     const derivedFreekickProfile = deriveFreekickProfileFromActions(selectedActions);
     const resolvedFreekickProfile = derivedFreekickProfile || freekickProfile;
@@ -1173,11 +1178,11 @@ const lookupsQuery = useQuery({ queryKey: ["lookups"], queryFn: () => fetchJson<
       subMomentId: effectiveSubMomentId,
       actionIds: effectiveActionIds,
       subMomentSequence: subMomentSequencePayload,
-      cornerTakerId,
-      freekickTakerId,
-      penaltyTakerId,
-      crossAuthorId,
-      throwInTakerId,
+      cornerTakerId: null,
+      freekickTakerId: null,
+      penaltyTakerId: null,
+      crossAuthorId: null,
+      throwInTakerId: null,
       referencePlayerId,
       foulSufferedById,
       goalCoordinates: goalPoint ?? undefined,
@@ -1265,7 +1270,7 @@ const updateMutation = useMutation({
     if (!seasonId || !championshipId) throw new Error("Selecione época e campeonato.");
 
     const selectedActions = lookupsQuery.data?.actions.filter((a) => effectiveActionIds.includes(a.id)) ?? [];
-    const requiresGoal = selectedActions.some((a) => a.name.toLowerCase().includes("marcador") || a.context === "field_goal");
+    const requiresGoal = selectedActions.some((a) => a.context === "field_goal");
     const requiresField = selectedActions.length > 0;
     const derivedFreekickProfile = deriveFreekickProfileFromActions(selectedActions);
     const resolvedFreekickProfile = derivedFreekickProfile || freekickProfile;
@@ -1311,11 +1316,11 @@ const updateMutation = useMutation({
       subMomentId: effectiveSubMomentId,
       actionIds: effectiveActionIds,
       subMomentSequence: subMomentSequencePayload,
-      cornerTakerId,
-      freekickTakerId,
-      penaltyTakerId,
-      crossAuthorId,
-      throwInTakerId,
+      cornerTakerId: null,
+      freekickTakerId: null,
+      penaltyTakerId: null,
+      crossAuthorId: null,
+      throwInTakerId: null,
       referencePlayerId,
       foulSufferedById,
       goalCoordinates: goalPoint ?? undefined,
@@ -1425,7 +1430,7 @@ const filteredChampionships = useMemo(() => {
         if (!subMoment) return null;
         const availableActions = lookupsQuery.data.actions.filter((action) => {
           if (action.subMomentId !== subMoment.id) return false;
-          return !hiddenActionNames.has(normalizeActionName(action.name));
+          return !isHiddenActionName(action.name);
         });
         return {
           sequenceOrder: index + 1,
@@ -1525,8 +1530,7 @@ const filteredChampionships = useMemo(() => {
     if (!subMomentId || !lookupsQuery.data) return [];
     const bySubMoment = lookupsQuery.data.actions.filter((a) => {
       if (a.subMomentId !== subMomentId) return false;
-      const normalized = normalizeActionName(a.name);
-      if (hiddenActionNames.has(normalized)) return false;
+      if (isHiddenActionName(a.name)) return false;
       return true;
     });
 
@@ -1542,8 +1546,7 @@ const filteredChampionships = useMemo(() => {
     });
 
     lookupsQuery.data.actions.forEach((action) => {
-      const normalized = normalizeActionName(action.name);
-      if (hiddenActionNames.has(normalized)) return;
+      if (isHiddenActionName(action.name)) return;
       const canonical = normalizeRecoveryAction(action.name);
       if (!recoveryActionWhitelist.has(canonical)) return;
       if (!actionByCanonical.has(canonical)) {
@@ -1624,9 +1627,7 @@ const filteredChampionships = useMemo(() => {
   const hasPreviousMomentAction = normalizedSelectedActionNames.some((name) => name.includes("momento anterior"));
   const hasCrossAction = normalizedSelectedActionNames.some((name) => name.includes("cruzamento"));
   const hasThrowInAction = normalizedSelectedActionNames.some((name) => name.includes("lancamento"));
-  const hasThrowInMarkerAction = normalizedSelectedActionNames.some(
-    (name) => name.includes("marcador") && name.includes("lancamento")
-  );
+  const hasThrowInMarkerAction = false;
   const hasReferencePlayersAction = normalizedSelectedActionNames.some((name) => name.includes("referenc"));
   const hasFoulSufferedAction = normalizedSelectedActionNames.some(
     (name) =>
@@ -1634,14 +1635,10 @@ const filteredChampionships = useMemo(() => {
       name.includes("falta sofrida") ||
       name.includes("sofreu a falta")
   );
-  const hasCornerMarkerAction = normalizedSelectedActionNames.some(
-    (name) => name.includes("marcador") && name.includes("canto")
-  );
-  const hasFreekickMarkerAction = normalizedSelectedActionNames.some(
-    (name) => name.includes("marcador") && (name.includes("livre") || name.includes("falta"))
-  );
+  const hasCornerMarkerAction = false;
+  const hasFreekickMarkerAction = false;
 
-  const requiresGoal = selectedActions.some((a) => a.name.toLowerCase().includes("marcador") || a.context === "field_goal");
+  const requiresGoal = selectedActions.some((a) => a.context === "field_goal");
   const requiresField = selectedActions.length > 0;
 
 
@@ -1659,10 +1656,10 @@ const filteredChampionships = useMemo(() => {
   const isPenalty = normalizedSubMomentName.includes("penal") || normalizedSubMomentName.includes("penalty");
 
 
-  const isCross = hasCrossAction;
+  const isCross = false;
 
   const isThrowIn = normalizedSubMomentName.includes("lancamento");
-  const shouldRequirePenaltyTaker = isPenalty || hasPenaltyAction;
+  const shouldRequirePenaltyTaker = false;
   const shouldShowPreviousMomentDescription = hasPreviousMomentAction && (isDirectFreekickSubMoment || isPenalty);
 
     const currentPlayers = playersQuery.data ?? [];
@@ -1949,21 +1946,6 @@ const filteredChampionships = useMemo(() => {
     (isOffensiveOrganizationMoment
       ? hasAnyOffensiveOrganizationSelection
       : resolvedSubMomentId && resolvedActionIds.length > 0) &&
-
-
-    (!hasCornerMarkerAction || cornerTakerId) &&
-
-
-    (!hasFreekickMarkerAction || freekickTakerId) &&
-
-
-    (!shouldRequirePenaltyTaker || penaltyTakerId) &&
-
-
-    (!hasCrossAction || crossAuthorId) &&
-
-
-    (!hasThrowInMarkerAction || throwInTakerId) &&
 
 
     (!hasFoulSufferedAction || foulSufferedById) &&
@@ -2852,24 +2834,7 @@ const filteredChampionships = useMemo(() => {
                   </Select>
                 </div>
               )}
-              {hasThrowInMarkerAction && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Quem efetuou o lançamento?</label>
-                  <Select
-                    value={throwInTakerId?.toString() ?? ""}
-                    onChange={(e) => setThrowInTakerId(e.target.value ? Number(e.target.value) : undefined)}
-                    disabled={!teamId || playersQuery.isLoading}
-                    className="bg-card/70 border-border/60 text-white"
-                  >
-                    <option value="">Selecionar jogador</option>
-                    {currentPlayers.map((p) => (
-                      <option key={p.id} value={p.id} className="text-black">
-                        {p.name}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              )}
+
               {hasFoulSufferedAction && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Quem sofreu a falta?</label>
@@ -2891,272 +2856,24 @@ const filteredChampionships = useMemo(() => {
 
 
               {hasCornerAction && (
-
-
-                <>
-
-
-                  {hasCornerMarkerAction ? (
-
-
-                    <div className="space-y-2">
-
-
-                      <label className="text-sm font-medium">Executante do Canto</label>
-
-
-                      <Select
-
-
-                        value={cornerTakerId?.toString() ?? ""}
-
-
-                        onChange={(e) => setCornerTakerId(e.target.value ? Number(e.target.value) : undefined)}
-
-
-                        disabled={!teamId || playersQuery.isLoading}
-
-
-                      >
-
-
-                        <option value="">Selecionar jogador</option>
-
-
-                        {currentPlayers.map((p) => (
-
-
-                          <option key={p.id} value={p.id} className="text-black">
-
-
-                            {p.name}
-
-
-                          </option>
-
-
-                        ))}
-
-
-                      </Select>
-
-
-                    </div>
-
-
-                  ) : (
-
-
-                    <div className="rounded-xl border border-dashed border-border/60 bg-card/30 px-3 py-2 text-xs text-muted-foreground">
-
-
-                    Seleciona a ação correspondente ao canto para indicar o jogador responsável.
-
-
-                    </div>
-
-
-                  )}
-
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Perfil do canto</label>
-                    <Select value={cornerProfile} onChange={(e) => setCornerProfile(e.target.value)}>
-                      <option value="">Sem perfil</option>
-                      {cornerProfiles.map((option) => (
-                        <option key={option.value} value={option.value} className="text-black">
-                          {option.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-
-
-                </>
-
-
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Perfil do canto</label>
+                  <Select value={cornerProfile} onChange={(e) => setCornerProfile(e.target.value)}>
+                    <option value="">Sem perfil</option>
+                    {cornerProfiles.map((option) => (
+                      <option key={option.value} value={option.value} className="text-black">
+                        {option.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
               )}
 
 
               {hasFreekickAction && (
-
-
-                <>
-
-
-                  {hasFreekickMarkerAction ? (
-
-
-                    <div className="space-y-2">
-
-
-                      <label className="text-sm font-medium">Executante da Falta</label>
-
-
-                      <Select
-
-
-                        value={freekickTakerId?.toString() ?? ""}
-
-
-                        onChange={(e) => setFreekickTakerId(e.target.value ? Number(e.target.value) : undefined)}
-
-
-                        disabled={!teamId || playersQuery.isLoading}
-
-
-                      >
-
-
-                        <option value="">Selecionar jogador</option>
-
-
-                        {currentPlayers.map((p) => (
-
-
-                          <option key={p.id} value={p.id} className="text-black">
-
-
-                            {p.name}
-
-
-                          </option>
-
-
-                        ))}
-
-
-                      </Select>
-
-
-                    </div>
-
-
-                  ) : (
-
-
-                    <div className="rounded-xl border border-dashed border-border/60 bg-card/30 px-3 py-2 text-xs text-muted-foreground">
-
-
-                      Escolhe a ação correspondente à falta para desbloquear o seletor de jogador.
-
-
-                    </div>
-
-
-                  )}
-
-
-                  <p className="text-xs text-muted-foreground">
-                    O perfil do livre (Aberto, Fechado ou Combinado) segue o cartão de ação selecionado no passo anterior.
-                  </p>
-
-
-                </>
-
-
-              )}
-
-
-              {shouldRequirePenaltyTaker && (
-
-
-                <div className="space-y-2">
-
-
-                  <label className="text-sm font-medium">Executante do Penálti</label>
-
-
-                  <Select
-
-
-                    value={penaltyTakerId?.toString() ?? ""}
-
-
-                    onChange={(e) => setPenaltyTakerId(e.target.value ? Number(e.target.value) : undefined)}
-
-
-                    disabled={!teamId || playersQuery.isLoading}
-
-
-                  >
-
-
-                    <option value="">Selecionar jogador</option>
-
-
-                    {currentPlayers.map((p) => (
-
-
-                      <option key={p.id} value={p.id} className="text-black">
-
-
-                        {p.name}
-
-
-                      </option>
-
-
-                    ))}
-
-
-                  </Select>
-
-
-                </div>
-
-
-              )}
-
-
-              {hasCrossAction && (
-
-
-                <div className="space-y-2">
-
-
-                  <label className="text-sm font-medium">Autor do Cruzamento</label>
-
-
-                  <Select
-
-
-                    value={crossAuthorId?.toString() ?? ""}
-
-
-                    onChange={(e) => setCrossAuthorId(e.target.value ? Number(e.target.value) : undefined)}
-
-
-                    disabled={!teamId || playersQuery.isLoading}
-
-
-                  >
-
-
-                    <option value="">Selecionar jogador</option>
-
-
-                    {currentPlayers.map((p) => (
-
-
-                      <option key={p.id} value={p.id} className="text-black">
-
-
-                        {p.name}
-
-
-                      </option>
-
-
-                    ))}
-
-
-                  </Select>
-
-
-                </div>
-
-
+                <p className="text-xs text-muted-foreground">
+                  O perfil do livre (Aberto, Fechado ou Combinado) segue o cartao de acao selecionado no passo anterior.
+                </p>
               )}
 
 
@@ -3468,12 +3185,6 @@ const filteredChampionships = useMemo(() => {
                     <span>{currentPlayers.find((p) => p.id === referencePlayerId)?.name ?? "-"}</span>
                   </>
                 )}
-                {hasThrowInMarkerAction && (
-                  <>
-                    <span className="text-muted-foreground">Executante do lançamento</span>
-                    <span>{currentPlayers.find((p) => p.id === throwInTakerId)?.name ?? "-"}</span>
-                  </>
-                )}
 
                 {hasFoulSufferedAction && (
                   <>
@@ -3500,87 +3211,21 @@ const filteredChampionships = useMemo(() => {
 
 
                 {isCorner && (
-
-
                   <>
-
-
-                    <span className="text-muted-foreground">Executante do canto</span>
-
-
-                    <span>{currentPlayers.find((p) => p.id === cornerTakerId)?.name ?? "-"}</span>
-
-
                     <span className="text-muted-foreground">Perfil do canto</span>
-
-
                     <span>{labelFromOption(cornerProfiles, cornerProfile)}</span>
-
-
                   </>
-
-
                 )}
 
 
                 {isFreeKick && (
-
-
                   <>
-
-
-                    <span className="text-muted-foreground">Executante da falta</span>
-
-
-                    <span>{currentPlayers.find((p) => p.id === freekickTakerId)?.name ?? "-"}</span>
-
-
                     <span className="text-muted-foreground">Perfil do livre</span>
-
-
                     <span>{labelFromOption(freekickProfiles, freekickProfile)}</span>
-
-
                   </>
-
-
                 )}
 
 
-                {isPenalty && (
-
-
-                  <>
-
-
-                    <span className="text-muted-foreground">Executante do penálti</span>
-
-
-                    <span>{currentPlayers.find((p) => p.id === penaltyTakerId)?.name ?? "-"}</span>
-
-
-                  </>
-
-
-                )}
-
-
-                {isCross && (
-
-
-                  <>
-
-
-                    <span className="text-muted-foreground">Autor do cruzamento</span>
-
-
-                    <span>{currentPlayers.find((p) => p.id === crossAuthorId)?.name ?? "-"}</span>
-
-
-                  </>
-
-
-                )}
 
 
                 {isThrowIn && (
