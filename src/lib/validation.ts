@@ -100,12 +100,12 @@ export const goalInputSchema = z
         });
       }
     }
-    const isTransitionMoment = normalizeToken(value.momentName).includes("transicao ofensiva");
+    const isTransitionMoment = normalizeToken(value.momentName).includes("transicao defensiva");
     if (isTransitionMoment && !value.transitionDrawing && !value.attackingSpaceId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["attackingSpaceId"],
-        message: "attackingSpaceId ou transitionDrawing obrigatorio para Transicao Ofensiva"
+        message: "Zona da perda ou desenho da transicao obrigatorio para Transicao Defensiva"
       });
     }
   });

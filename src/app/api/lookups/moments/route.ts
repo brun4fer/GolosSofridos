@@ -4,10 +4,12 @@ import { NextResponse } from "next/server";
 import { ZodError, z } from "zod";
 import { db } from "@/db/client";
 import { moments } from "@/schema/schema";
+import { ensureDefensiveTaxonomyNames } from "@/server/lookups";
 
 const schema = z.object({ name: z.string().min(2) });
 
 export async function GET() {
+  await ensureDefensiveTaxonomyNames();
   const rows = await db.query.moments.findMany({
     columns: { id: true, name: true },
     orderBy: (fields, { asc }) => [asc(fields.name)]

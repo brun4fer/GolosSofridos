@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "../db/client";
 import { goalInvolvements, goals, moments, actions, subMoments, players, goalActions } from "../schema/schema";
+import { ensureDefensiveTaxonomyNames } from "./lookups";
 
 const normalizeActionLabel = (value: string) =>
   value
@@ -17,7 +18,7 @@ function shouldHideFromActionChart(actionName: string) {
   const hiddenExactPatterns = [
     "jogador referencia",
     "jogadores referencia",
-    "espacos que atacam",
+    "espacos da perda",
     "falta sobre",
     "momento anterior"
   ];
@@ -143,6 +144,7 @@ export async function zoneDistribution(teamId: number) {
 }
 
 export async function momentsBreakdown(teamId: number) {
+  await ensureDefensiveTaxonomyNames();
   const result = await db.execute<{ moment: string; goals: number }>(sql`
     SELECT m.name AS moment, COUNT(*)::int AS goals
     FROM ${goals} g

@@ -243,7 +243,7 @@ export default function ManageTeamsPage() {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Radiografia Ofensiva (PDF)</label>
+            <label className="text-xs text-muted-foreground">Radiografia Defensiva (PDF)</label>
             <FileUpload
               label={form.radiographyPdfUrl ? "Atualizar PDF" : "Carregar PDF"}
               accept="application/pdf"

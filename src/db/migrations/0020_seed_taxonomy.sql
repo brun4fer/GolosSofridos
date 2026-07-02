@@ -1,15 +1,15 @@
 INSERT INTO "moments" ("name")
 VALUES
-  ('Organização Ofensiva'),
-  ('Transição Ofensiva'),
-  ('Bolas Paradas')
+  ('Organização Defensiva'),
+  ('Transição Defensiva'),
+  ('Bolas Paradas Defensivas')
 ON CONFLICT ("name") DO UPDATE SET "name" = EXCLUDED."name";
 
 WITH moment_input(old_id, name) AS (
   VALUES
-    (15, 'Organização Ofensiva'),
-    (16, 'Transição Ofensiva'),
-    (17, 'Bolas Paradas')
+    (15, 'Organização Defensiva'),
+    (16, 'Transição Defensiva'),
+    (17, 'Bolas Paradas Defensivas')
 ),
 sub_moment_input(old_id, name, old_moment_id) AS (
   VALUES
@@ -17,8 +17,8 @@ sub_moment_input(old_id, name, old_moment_id) AS (
     (41, 'Construção', 15),
     (42, 'Criação', 15),
     (43, 'Finalização', 15),
-    (44, 'Recuperação meio campo defensivo', 16),
-    (45, 'Recuperação meio campo ofensivo', 16),
+    (44, 'Perda no meio campo próprio', 16),
+    (45, 'Perda no meio campo adversário', 16),
     (46, 'Lançamento Lateral', 17),
     (47, 'Canto', 17),
     (48, 'Livre', 17),
@@ -34,9 +34,9 @@ ON CONFLICT ("moment_id", "name") DO UPDATE SET "name" = EXCLUDED."name";
 
 WITH moment_input(old_id, name) AS (
   VALUES
-    (15, 'Organização Ofensiva'),
-    (16, 'Transição Ofensiva'),
-    (17, 'Bolas Paradas')
+    (15, 'Organização Defensiva'),
+    (16, 'Transição Defensiva'),
+    (17, 'Bolas Paradas Defensivas')
 ),
 sub_moment_input(old_id, name, old_moment_id) AS (
   VALUES
@@ -44,8 +44,8 @@ sub_moment_input(old_id, name, old_moment_id) AS (
     (41, 'Construção', 15),
     (42, 'Criação', 15),
     (43, 'Finalização', 15),
-    (44, 'Recuperação meio campo defensivo', 16),
-    (45, 'Recuperação meio campo ofensivo', 16),
+    (44, 'Perda no meio campo próprio', 16),
+    (45, 'Perda no meio campo adversário', 16),
     (46, 'Lançamento Lateral', 17),
     (47, 'Canto', 17),
     (48, 'Livre', 17),

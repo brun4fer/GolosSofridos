@@ -119,7 +119,7 @@ const isHiddenActionName = (name: string) => {
   return hiddenActionNames.has(normalized) || normalized.includes("marcador");
 };
 
-const recoveryActionWhitelist = new Set([
+const transitionActionWhitelist = new Set([
   "cruzamento direita",
   "cruzamento esquerda",
   "remate fora de area",
@@ -128,7 +128,7 @@ const recoveryActionWhitelist = new Set([
   "jogador referencia"
 ]);
 
-const recoveryActionOrder = [
+const transitionActionOrder = [
   "cruzamento direita",
   "cruzamento esquerda",
   "profundidade",
@@ -136,14 +136,14 @@ const recoveryActionOrder = [
   "jogador referencia"
 ] as const;
 
-const offensiveOrganizationSequenceNames = [
+const defensiveOrganizationSequenceNames = [
   "saida do gr",
   "construcao",
   "criacao",
   "finalizacao"
 ] as const;
 
-const normalizeRecoveryAction = (name: string) => {
+const normalizeTransitionAction = (name: string) => {
   const normalized = normalizeActionName(name);
   if (normalized === "remate de fora da area") return "remate fora de area";
   return normalized;
@@ -198,7 +198,7 @@ const wizardStepDefinitions = [
   { id: "context", label: "Momentos" },
 
 
-  { id: "transition", label: "Espaço Recuperação" },
+  { id: "transition", label: "Espaço da Perda" },
 
 
   { id: "assist", label: "Zona de referência" },
@@ -326,7 +326,7 @@ const mapSurfaceClass =
 const mapSvgClass = "h-auto w-full max-w-full aspect-[3/2] cursor-crosshair touch-none";
 const mapStepContainerClass = "space-y-3 pb-2";
 
-type RecoveryGridVariant = "defensive" | "offensive";
+type TransitionZoneVariant = "own" | "opponent";
 
 type TacticalZone = {
   id: number;
@@ -336,7 +336,7 @@ type TacticalZone = {
   height: number;
 };
 
-const defensiveRecoveryZones: TacticalZone[] = [
+const ownHalfLossZones: TacticalZone[] = [
   { id: 1, x: 8, y: 10, width: 26, height: 12 },
   { id: 2, x: 34, y: 10, width: 26, height: 12 },
   { id: 3, x: 8, y: 22, width: 26, height: 7 },
@@ -349,7 +349,7 @@ const defensiveRecoveryZones: TacticalZone[] = [
   { id: 10, x: 34, y: 58, width: 26, height: 12 }
 ];
 
-const offensiveRecoveryZones: TacticalZone[] = [
+const opponentHalfLossZones: TacticalZone[] = [
   { id: 1, x: 60, y: 10, width: 26, height: 12 },
   { id: 2, x: 86, y: 10, width: 26, height: 12 },
   { id: 3, x: 60, y: 22, width: 26, height: 7 },
@@ -362,11 +362,11 @@ const offensiveRecoveryZones: TacticalZone[] = [
   { id: 10, x: 86, y: 58, width: 26, height: 12 }
 ];
 
-const getRecoveryZones = (variant: RecoveryGridVariant) =>
-  variant === "defensive" ? defensiveRecoveryZones : offensiveRecoveryZones;
+const getLossZones = (variant: TransitionZoneVariant) =>
+  variant === "own" ? ownHalfLossZones : opponentHalfLossZones;
 
-const getRecoveryZoneCenterPoint = (variant: RecoveryGridVariant, zoneId: number): Point | null => {
-  const zone = getRecoveryZones(variant).find((entry) => entry.id === zoneId);
+const getLossZoneCenterPoint = (variant: TransitionZoneVariant, zoneId: number): Point | null => {
+  const zone = getLossZones(variant).find((entry) => entry.id === zoneId);
   if (!zone) return null;
   return {
     x: (zone.x + zone.width / 2) / 120,
@@ -374,8 +374,8 @@ const getRecoveryZoneCenterPoint = (variant: RecoveryGridVariant, zoneId: number
   };
 };
 
-const getClosestRecoveryZoneId = (variant: RecoveryGridVariant, point: Point): number | null => {
-  const zones = getRecoveryZones(variant);
+const getClosestLossZoneId = (variant: TransitionZoneVariant, point: Point): number | null => {
+  const zones = getLossZones(variant);
   if (zones.length === 0) return null;
 
   const best = zones.reduce<{ zoneId: number; distance: number } | null>((currentBest, zone) => {
@@ -391,22 +391,22 @@ const getClosestRecoveryZoneId = (variant: RecoveryGridVariant, point: Point): n
   return best?.zoneId ?? null;
 };
 
-function RecoverySpaceGrid({
+function LossSpaceGrid({
   variant,
   value,
   onChange,
   readOnly = false,
   showHelperText = true
 }: {
-  variant: RecoveryGridVariant;
+  variant: TransitionZoneVariant;
   value?: number | null;
   onChange?: (zoneId: number) => void;
   readOnly?: boolean;
   showHelperText?: boolean;
 }) {
-  const zones = getRecoveryZones(variant);
+  const zones = getLossZones(variant);
   const inertOverlay =
-    variant === "defensive" ? <rect x="60" y="10" width="52" height="60" fill="rgba(2,6,23,0.68)" /> : <rect x="8" y="10" width="52" height="60" fill="rgba(2,6,23,0.68)" />;
+    variant === "own" ? <rect x="60" y="10" width="52" height="60" fill="rgba(2,6,23,0.68)" /> : <rect x="8" y="10" width="52" height="60" fill="rgba(2,6,23,0.68)" />;
 
   return (
     <div className="space-y-2">
@@ -456,7 +456,7 @@ function RecoverySpaceGrid({
       </InteractiveMapFrame>
       {showHelperText && (
         <p className="text-xs text-muted-foreground">
-          Selecione uma zona para guardar em <code className="font-mono text-cyan-300">attacking_space_id</code>.
+          Selecione uma zona para registar o espaço da perda.
         </p>
       )}
     </div>
@@ -1056,7 +1056,7 @@ const [minute, setMinute] = useState(0);
 const [momentId, setMomentId] = useState<number | undefined>();
 const [subMomentId, setSubMomentId] = useState<number | undefined>();
 const [actionIds, setActionIds] = useState<number[]>([]);
-const [offensiveSequenceActionBySubMoment, setOffensiveSequenceActionBySubMoment] = useState<Record<number, number>>({});
+const [defensiveSequenceActionBySubMoment, setDefensiveSequenceActionBySubMoment] = useState<Record<number, number>>({});
 const [cornerProfile, setCornerProfile] = useState<string>("");
 const [freekickProfile, setFreekickProfile] = useState<string>("");
 const [throwInProfile, setThrowInProfile] = useState<string>("");
@@ -1105,28 +1105,28 @@ const lookupsQuery = useQuery({ queryKey: ["lookups"], queryFn: () => fetchJson<
 
   const createMutation = useMutation({
   mutationFn: async () => {
-    const subMomentSequencePayload = isOffensiveOrganizationMoment
-      ? [...offensiveOrganizationSequenceSelection]
+    const subMomentSequencePayload = isDefensiveOrganizationMoment
+      ? [...defensiveOrganizationSequenceSelection]
           .sort((a, b) => a.sequenceOrder - b.sequenceOrder)
           .map((entry) => ({ ...entry }))
       : resolvedSubMomentId && resolvedActionIds.length > 0
         ? [{ subMomentId: resolvedSubMomentId, actionId: resolvedActionIds[0], sequenceOrder: 1 }]
         : [];
-    const effectiveActionIds = isOffensiveOrganizationMoment
+    const effectiveActionIds = isDefensiveOrganizationMoment
       ? subMomentSequencePayload.map((entry) => entry.actionId)
       : resolvedActionIds;
-    const effectiveSubMomentId = isOffensiveOrganizationMoment
+    const effectiveSubMomentId = isDefensiveOrganizationMoment
       ? subMomentSequencePayload[subMomentSequencePayload.length - 1]?.subMomentId
       : resolvedSubMomentId;
 
     if (!teamId || !opponentTeamId || involvements.length === 0 || !momentId || !effectiveSubMomentId || effectiveActionIds.length === 0) {
       throw new Error("Campos obrigatórios em falta");
     }
-    if (isOffensiveOrganizationMoment && !hasCompleteOffensiveOrganizationCatalogue) {
-      throw new Error("Sub-momentos de Organização Ofensiva não encontrados no catálogo.");
+    if (isDefensiveOrganizationMoment && !hasCompleteDefensiveOrganizationCatalogue) {
+      throw new Error("Sub-momentos de Organização Defensiva não encontrados no catálogo.");
     }
-    if (isOffensiveOrganizationMoment && !hasAnyOffensiveOrganizationSelection) {
-      throw new Error("Seleciona pelo menos uma fase da Organização Ofensiva.");
+    if (isDefensiveOrganizationMoment && !hasAnyDefensiveOrganizationSelection) {
+      throw new Error("Seleciona pelo menos uma fase da Organização Defensiva.");
     }
     if (!seasonId || !championshipId) throw new Error("Selecione época e campeonato.");
 
@@ -1139,7 +1139,7 @@ const lookupsQuery = useQuery({ queryKey: ["lookups"], queryFn: () => fetchJson<
     if (requiresGoal && !goalPoint) throw new Error("Esta ação requer um ponto na baliza.");
     if (requiresField && !fieldPoint) throw new Error("Ponto no campo obrigatório para esta ação.");
     if (shouldShowTransitionStep && !attackingSpaceId) {
-      throw new Error("Seleciona o espaço de recuperação.");
+      throw new Error("Seleciona o espaço da perda.");
     }
     const hasFoulSufferedAction = selectedActions.some((a) => {
       const normalized = normalizeActionName(a.name);
@@ -1216,7 +1216,7 @@ const lookupsQuery = useQuery({ queryKey: ["lookups"], queryFn: () => fetchJson<
     setMomentId(undefined);
     setSubMomentId(undefined);
     setActionIds([]);
-    setOffensiveSequenceActionBySubMoment({});
+    setDefensiveSequenceActionBySubMoment({});
     setCornerProfile("");
     setFreekickProfile("");
     setThrowInProfile("");
@@ -1244,28 +1244,28 @@ const lookupsQuery = useQuery({ queryKey: ["lookups"], queryFn: () => fetchJson<
 const updateMutation = useMutation({
   mutationFn: async () => {
     if (!existingGoal) return;
-    const subMomentSequencePayload = isOffensiveOrganizationMoment
-      ? [...offensiveOrganizationSequenceSelection]
+    const subMomentSequencePayload = isDefensiveOrganizationMoment
+      ? [...defensiveOrganizationSequenceSelection]
           .sort((a, b) => a.sequenceOrder - b.sequenceOrder)
           .map((entry) => ({ ...entry }))
       : resolvedSubMomentId && resolvedActionIds.length > 0
         ? [{ subMomentId: resolvedSubMomentId, actionId: resolvedActionIds[0], sequenceOrder: 1 }]
         : [];
-    const effectiveActionIds = isOffensiveOrganizationMoment
+    const effectiveActionIds = isDefensiveOrganizationMoment
       ? subMomentSequencePayload.map((entry) => entry.actionId)
       : resolvedActionIds;
-    const effectiveSubMomentId = isOffensiveOrganizationMoment
+    const effectiveSubMomentId = isDefensiveOrganizationMoment
       ? subMomentSequencePayload[subMomentSequencePayload.length - 1]?.subMomentId
       : resolvedSubMomentId;
 
     if (!teamId || !opponentTeamId || involvements.length === 0 || !momentId || !effectiveSubMomentId || effectiveActionIds.length === 0) {
       throw new Error("Campos obrigatórios em falta");
     }
-    if (isOffensiveOrganizationMoment && !hasCompleteOffensiveOrganizationCatalogue) {
-      throw new Error("Sub-momentos de Organização Ofensiva não encontrados no catálogo.");
+    if (isDefensiveOrganizationMoment && !hasCompleteDefensiveOrganizationCatalogue) {
+      throw new Error("Sub-momentos de Organização Defensiva não encontrados no catálogo.");
     }
-    if (isOffensiveOrganizationMoment && !hasAnyOffensiveOrganizationSelection) {
-      throw new Error("Seleciona pelo menos uma fase da Organização Ofensiva.");
+    if (isDefensiveOrganizationMoment && !hasAnyDefensiveOrganizationSelection) {
+      throw new Error("Seleciona pelo menos uma fase da Organização Defensiva.");
     }
     if (!seasonId || !championshipId) throw new Error("Selecione época e campeonato.");
 
@@ -1277,7 +1277,7 @@ const updateMutation = useMutation({
     if (requiresGoal && !goalPoint) throw new Error("Esta ação requer um ponto na baliza.");
     if (requiresField && !fieldPoint) throw new Error("Ponto no campo obrigatório para esta ação.");
     if (shouldShowTransitionStep && !attackingSpaceId) {
-      throw new Error("Seleciona o espaço de recuperação.");
+      throw new Error("Seleciona o espaço da perda.");
     }
     const hasFoulSufferedAction = selectedActions.some((a) => {
       const normalized = normalizeActionName(a.name);
@@ -1419,12 +1419,12 @@ const filteredChampionships = useMemo(() => {
 
   const selectedMoment = momentId ? lookupsQuery.data?.moments.find((m) => m.id === momentId) : undefined;
   const normalizedMomentName = normalizeActionName(selectedMoment?.name ?? "");
-  const isOffensiveOrganizationMoment = normalizedMomentName === "organizacao ofensiva";
+  const isDefensiveOrganizationMoment = normalizedMomentName === "organizacao defensiva";
 
-  const offensiveOrganizationSubMomentRows = useMemo(() => {
-    if (!isOffensiveOrganizationMoment || !lookupsQuery.data) return [];
+  const defensiveOrganizationSubMomentRows = useMemo(() => {
+    if (!isDefensiveOrganizationMoment || !lookupsQuery.data) return [];
     const byNormalizedName = new Map(filteredSubMoments.map((subMoment) => [normalizeActionName(subMoment.name), subMoment]));
-    return offensiveOrganizationSequenceNames
+    return defensiveOrganizationSequenceNames
       .map((name, index) => {
         const subMoment = byNormalizedName.get(name);
         if (!subMoment) return null;
@@ -1447,13 +1447,13 @@ const filteredChampionships = useMemo(() => {
           actions: LookupAction[];
         } => Boolean(row)
       );
-  }, [isOffensiveOrganizationMoment, filteredSubMoments, lookupsQuery.data]);
+  }, [isDefensiveOrganizationMoment, filteredSubMoments, lookupsQuery.data]);
 
-  const offensiveOrganizationSequenceSelection = useMemo(
+  const defensiveOrganizationSequenceSelection = useMemo(
     () =>
-      offensiveOrganizationSubMomentRows
+      defensiveOrganizationSubMomentRows
         .map((row) => {
-          const actionId = offensiveSequenceActionBySubMoment[row.subMoment.id];
+          const actionId = defensiveSequenceActionBySubMoment[row.subMoment.id];
           if (!actionId) return null;
           return {
             subMomentId: row.subMoment.id,
@@ -1470,46 +1470,48 @@ const filteredChampionships = useMemo(() => {
             sequenceOrder: number;
           } => Boolean(item)
         ),
-    [offensiveOrganizationSubMomentRows, offensiveSequenceActionBySubMoment]
+    [defensiveOrganizationSubMomentRows, defensiveSequenceActionBySubMoment]
   );
 
   useEffect(() => {
-    if (!isOffensiveOrganizationMoment) return;
-    const validSubMomentIds = new Set(offensiveOrganizationSubMomentRows.map((row) => row.subMoment.id));
-    setOffensiveSequenceActionBySubMoment((prev) => {
+    if (!isDefensiveOrganizationMoment) return;
+    const validSubMomentIds = new Set(defensiveOrganizationSubMomentRows.map((row) => row.subMoment.id));
+    setDefensiveSequenceActionBySubMoment((prev) => {
       const nextEntries = Object.entries(prev).filter(([key]) => validSubMomentIds.has(Number(key)));
       if (nextEntries.length === Object.keys(prev).length) return prev;
       return Object.fromEntries(nextEntries.map(([key, value]) => [Number(key), value]));
     });
-  }, [isOffensiveOrganizationMoment, offensiveOrganizationSubMomentRows]);
+  }, [isDefensiveOrganizationMoment, defensiveOrganizationSubMomentRows]);
 
-  const hasCompleteOffensiveOrganizationCatalogue =
-    offensiveOrganizationSubMomentRows.length === offensiveOrganizationSequenceNames.length;
-  const hasAnyOffensiveOrganizationSelection = offensiveOrganizationSequenceSelection.length > 0;
+  const hasCompleteDefensiveOrganizationCatalogue =
+    defensiveOrganizationSubMomentRows.length === defensiveOrganizationSequenceNames.length;
+  const hasAnyDefensiveOrganizationSelection = defensiveOrganizationSequenceSelection.length > 0;
 
-  const resolvedSubMomentId = isOffensiveOrganizationMoment
-    ? offensiveOrganizationSequenceSelection[offensiveOrganizationSequenceSelection.length - 1]?.subMomentId
+  const resolvedSubMomentId = isDefensiveOrganizationMoment
+    ? defensiveOrganizationSequenceSelection[defensiveOrganizationSequenceSelection.length - 1]?.subMomentId
     : subMomentId;
-  const resolvedActionIds = isOffensiveOrganizationMoment
-    ? offensiveOrganizationSequenceSelection.map((entry) => entry.actionId)
+  const resolvedActionIds = isDefensiveOrganizationMoment
+    ? defensiveOrganizationSequenceSelection.map((entry) => entry.actionId)
     : actionIds;
 
   const selectedSubMoment = resolvedSubMomentId ? lookupsQuery.data?.subMoments.find((s) => s.id === resolvedSubMomentId) : undefined;
   const normalizedSubMomentName = normalizeActionName(selectedSubMoment?.name ?? "");
-  const isOffensiveTransitionMoment = normalizedMomentName === "transicao ofensiva";
-  const isRecoveryDefensiveSubMoment =
-    normalizedSubMomentName.includes("recuperacao") && normalizedSubMomentName.includes("meio campo defensivo");
-  const isRecoveryOffensiveSubMoment =
-    normalizedSubMomentName.includes("recuperacao") && normalizedSubMomentName.includes("meio campo ofensivo");
-  const isTransitionRecoverySubMoment = isRecoveryDefensiveSubMoment || isRecoveryOffensiveSubMoment;
-  const isOffensiveTransitionRecovery = isOffensiveTransitionMoment && isTransitionRecoverySubMoment;
-  const transitionRecoveryZoneLabel = isRecoveryDefensiveSubMoment
-    ? "Recuperação no Meio Campo Defensivo"
-    : isRecoveryOffensiveSubMoment
-      ? "Recuperação no Meio Campo Ofensivo"
-      : "Seleciona o sub-momento de recuperação";
-  const recoveryGridVariant: RecoveryGridVariant = isRecoveryOffensiveSubMoment ? "offensive" : "defensive";
-  const shouldShowTransitionStep = isOffensiveTransitionRecovery;
+  const isDefensiveTransitionMoment = normalizedMomentName === "transicao defensiva";
+  const isOwnHalfLossSubMoment =
+    normalizedSubMomentName.includes("perda") &&
+    (normalizedSubMomentName.includes("meio campo proprio") || normalizedSubMomentName.includes("meio campo defensivo"));
+  const isOpponentHalfLossSubMoment =
+    normalizedSubMomentName.includes("perda") &&
+    normalizedSubMomentName.includes("meio campo adversario");
+  const isTransitionLossSubMoment = isOwnHalfLossSubMoment || isOpponentHalfLossSubMoment;
+  const isDefensiveTransitionLoss = isDefensiveTransitionMoment && isTransitionLossSubMoment;
+  const transitionLossZoneLabel = isOwnHalfLossSubMoment
+    ? "Perda no Meio Campo Próprio"
+    : isOpponentHalfLossSubMoment
+      ? "Perda no Meio Campo Adversário"
+      : "Seleciona o sub-momento da perda";
+  const lossGridVariant: TransitionZoneVariant = isOpponentHalfLossSubMoment ? "opponent" : "own";
+  const shouldShowTransitionStep = isDefensiveTransitionLoss;
   const visibleSteps = useMemo(
     () => wizardStepDefinitions.filter((wizardStep) => shouldShowTransitionStep || wizardStep.id !== "transition"),
     [shouldShowTransitionStep]
@@ -1526,7 +1528,7 @@ const filteredChampionships = useMemo(() => {
   }, [shouldShowTransitionStep, step]);
 
   const filteredActions = useMemo(() => {
-    if (isOffensiveOrganizationMoment) return [];
+    if (isDefensiveOrganizationMoment) return [];
     if (!subMomentId || !lookupsQuery.data) return [];
     const bySubMoment = lookupsQuery.data.actions.filter((a) => {
       if (a.subMomentId !== subMomentId) return false;
@@ -1534,12 +1536,12 @@ const filteredChampionships = useMemo(() => {
       return true;
     });
 
-    if (!isOffensiveTransitionRecovery) return bySubMoment;
+    if (!isDefensiveTransitionLoss) return bySubMoment;
 
     const actionByCanonical = new Map<string, LookupAction>();
     bySubMoment.forEach((action) => {
-      const canonical = normalizeRecoveryAction(action.name);
-      if (!recoveryActionWhitelist.has(canonical)) return;
+      const canonical = normalizeTransitionAction(action.name);
+      if (!transitionActionWhitelist.has(canonical)) return;
       if (!actionByCanonical.has(canonical)) {
         actionByCanonical.set(canonical, action);
       }
@@ -1547,20 +1549,20 @@ const filteredChampionships = useMemo(() => {
 
     lookupsQuery.data.actions.forEach((action) => {
       if (isHiddenActionName(action.name)) return;
-      const canonical = normalizeRecoveryAction(action.name);
-      if (!recoveryActionWhitelist.has(canonical)) return;
+      const canonical = normalizeTransitionAction(action.name);
+      if (!transitionActionWhitelist.has(canonical)) return;
       if (!actionByCanonical.has(canonical)) {
         actionByCanonical.set(canonical, action);
       }
     });
 
-    return recoveryActionOrder
+    return transitionActionOrder
       .map((canonical) => actionByCanonical.get(canonical))
       .filter((action): action is LookupAction => Boolean(action));
-  }, [lookupsQuery.data, subMomentId, isOffensiveTransitionRecovery, isOffensiveOrganizationMoment]);
+  }, [lookupsQuery.data, subMomentId, isDefensiveTransitionLoss, isDefensiveOrganizationMoment]);
 
   useEffect(() => {
-    if (isOffensiveOrganizationMoment) {
+    if (isDefensiveOrganizationMoment) {
       setActionIds([]);
       return;
     }
@@ -1571,40 +1573,40 @@ const filteredChampionships = useMemo(() => {
       }
       return next;
     });
-  }, [filteredActions, isOffensiveOrganizationMoment]);
+  }, [filteredActions, isDefensiveOrganizationMoment]);
 
   useEffect(() => {
     if (!shouldShowTransitionStep || !attackingSpaceId) return;
-    const mappedPoint = getRecoveryZoneCenterPoint(recoveryGridVariant, attackingSpaceId);
+    const mappedPoint = getLossZoneCenterPoint(lossGridVariant, attackingSpaceId);
     if (mappedPoint) {
       setTransitionDrawingPoint(mappedPoint);
     }
-  }, [attackingSpaceId, recoveryGridVariant, shouldShowTransitionStep]);
+  }, [attackingSpaceId, lossGridVariant, shouldShowTransitionStep]);
 
   useEffect(() => {
     if (!shouldShowTransitionStep || attackingSpaceId || !transitionDrawingPoint) return;
-    const inferredZoneId = getClosestRecoveryZoneId(recoveryGridVariant, transitionDrawingPoint);
+    const inferredZoneId = getClosestLossZoneId(lossGridVariant, transitionDrawingPoint);
     if (inferredZoneId) {
       setAttackingSpaceId(inferredZoneId);
     }
-  }, [attackingSpaceId, recoveryGridVariant, shouldShowTransitionStep, transitionDrawingPoint]);
+  }, [attackingSpaceId, lossGridVariant, shouldShowTransitionStep, transitionDrawingPoint]);
 
   const selectedActions = useMemo(() => {
     if (!lookupsQuery.data) return [];
-    if (isOffensiveOrganizationMoment) {
+    if (isDefensiveOrganizationMoment) {
       const actionById = new Map(lookupsQuery.data.actions.map((action) => [action.id, action]));
-      return offensiveOrganizationSequenceSelection
+      return defensiveOrganizationSequenceSelection
         .map((entry) => actionById.get(entry.actionId))
         .filter((action): action is LookupAction => Boolean(action));
     }
     return filteredActions.filter((a) => actionIds.includes(a.id));
-  }, [lookupsQuery.data, isOffensiveOrganizationMoment, offensiveOrganizationSequenceSelection, filteredActions, actionIds]);
+  }, [lookupsQuery.data, isDefensiveOrganizationMoment, defensiveOrganizationSequenceSelection, filteredActions, actionIds]);
 
-  const offensiveSequenceSummary = useMemo(() => {
-    if (!lookupsQuery.data || !isOffensiveOrganizationMoment) return [];
+  const defensiveSequenceSummary = useMemo(() => {
+    if (!lookupsQuery.data || !isDefensiveOrganizationMoment) return [];
     const actionById = new Map(lookupsQuery.data.actions.map((action) => [action.id, action]));
-    return offensiveOrganizationSubMomentRows.map((row) => {
-      const selectedActionId = offensiveSequenceActionBySubMoment[row.subMoment.id];
+    return defensiveOrganizationSubMomentRows.map((row) => {
+      const selectedActionId = defensiveSequenceActionBySubMoment[row.subMoment.id];
       const selectedAction = selectedActionId ? actionById.get(selectedActionId) : undefined;
       return {
         sequenceOrder: row.sequenceOrder,
@@ -1612,7 +1614,7 @@ const filteredChampionships = useMemo(() => {
         actionName: selectedAction?.name ?? null
       };
     });
-  }, [lookupsQuery.data, isOffensiveOrganizationMoment, offensiveOrganizationSubMomentRows, offensiveSequenceActionBySubMoment]);
+  }, [lookupsQuery.data, isDefensiveOrganizationMoment, defensiveOrganizationSubMomentRows, defensiveSequenceActionBySubMoment]);
 
   const normalizedSelectedActionNames = useMemo(
     () => selectedActions.map((action) => normalizeActionName(action.name)),
@@ -1760,7 +1762,7 @@ const filteredChampionships = useMemo(() => {
         : existingGoal.subMomentId && existingActions.length > 0
           ? [{ subMomentId: existingGoal.subMomentId, actionId: existingActions[0], sequenceOrder: 1 }]
           : [];
-    setOffensiveSequenceActionBySubMoment(
+    setDefensiveSequenceActionBySubMoment(
       Object.fromEntries(existingSequence.map((entry) => [entry.subMomentId, entry.actionId]))
     );
     setGoalPoint(existingGoal.goalCoordinates ?? null);
@@ -1862,8 +1864,8 @@ const filteredChampionships = useMemo(() => {
         return Boolean(
           momentId &&
             minute >= 0 &&
-            (isOffensiveOrganizationMoment
-              ? hasAnyOffensiveOrganizationSelection
+            (isDefensiveOrganizationMoment
+              ? hasAnyDefensiveOrganizationSelection
               : resolvedSubMomentId && resolvedActionIds.length > 0)
         );
 
@@ -1943,8 +1945,8 @@ const filteredChampionships = useMemo(() => {
     momentId &&
 
 
-    (isOffensiveOrganizationMoment
-      ? hasAnyOffensiveOrganizationSelection
+    (isDefensiveOrganizationMoment
+      ? hasAnyDefensiveOrganizationSelection
       : resolvedSubMomentId && resolvedActionIds.length > 0) &&
 
 
@@ -2585,7 +2587,7 @@ const filteredChampionships = useMemo(() => {
                     setMomentId(val ? Number(val) : undefined);
                     setSubMomentId(undefined);
                     setActionIds([]);
-                    setOffensiveSequenceActionBySubMoment({});
+                    setDefensiveSequenceActionBySubMoment({});
                     setCornerProfile("");
                     setFreekickProfile("");
                     setThrowInProfile("");
@@ -2634,26 +2636,26 @@ const filteredChampionships = useMemo(() => {
               </div>
 
 
-              {isOffensiveOrganizationMoment ? (
+              {isDefensiveOrganizationMoment ? (
                 <div className="md:col-span-2 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <label className="text-sm font-medium">Sequência de Organização Ofensiva</label>
+                      <label className="text-sm font-medium">Sequência de Organização Defensiva</label>
                       <p className="text-xs text-muted-foreground">
                         Seleciona apenas as fases observadas (cada fase é opcional).
                       </p>
                     </div>
                     <Badge className="bg-cyan-500/10 text-cyan-100">
-                      {offensiveOrganizationSequenceSelection.length}/{offensiveOrganizationSequenceNames.length} fases
+                      {defensiveOrganizationSequenceSelection.length}/{defensiveOrganizationSequenceNames.length} fases
                     </Badge>
                   </div>
-                  {!hasCompleteOffensiveOrganizationCatalogue ? (
+                  {!hasCompleteDefensiveOrganizationCatalogue ? (
                     <div className="rounded-xl border border-dashed border-amber-400/40 bg-amber-500/10 p-3 text-xs text-amber-100">
-                      A configuração de sub-momentos da Organização Ofensiva não está completa.
+                      A configuração de sub-momentos da Organização Defensiva não está completa.
                     </div>
                   ) : (
                     <div className="grid gap-3 md:grid-cols-4">
-                      {offensiveOrganizationSubMomentRows.map((row) => (
+                      {defensiveOrganizationSubMomentRows.map((row) => (
                         <div
                           key={`oo-seq-${row.subMoment.id}`}
                           className="rounded-2xl border border-border/70 bg-gradient-to-b from-slate-900/70 to-slate-950/50 p-3 shadow-[0_16px_32px_rgba(2,6,23,0.4)]"
@@ -2663,7 +2665,7 @@ const filteredChampionships = useMemo(() => {
                               Fase {row.sequenceOrder}
                             </span>
                             <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                              {offensiveSequenceActionBySubMoment[row.subMoment.id] ? "Definida" : "Por definir"}
+                              {defensiveSequenceActionBySubMoment[row.subMoment.id] ? "Definida" : "Por definir"}
                             </span>
                           </div>
                           <div className="mb-3 text-sm font-semibold text-white">{row.subMoment.name}</div>
@@ -2674,13 +2676,13 @@ const filteredChampionships = useMemo(() => {
                               </div>
                             ) : (
                               row.actions.map((action) => {
-                                const isSelected = offensiveSequenceActionBySubMoment[row.subMoment.id] === action.id;
+                                const isSelected = defensiveSequenceActionBySubMoment[row.subMoment.id] === action.id;
                                 return (
                                   <button
                                     key={`oo-action-${row.subMoment.id}-${action.id}`}
                                     type="button"
                                     onClick={() =>
-                                      setOffensiveSequenceActionBySubMoment((prev) => {
+                                      setDefensiveSequenceActionBySubMoment((prev) => {
                                         const currentActionId = prev[row.subMoment.id];
                                         if (currentActionId === action.id) {
                                           const { [row.subMoment.id]: _removed, ...rest } = prev;
@@ -2727,7 +2729,7 @@ const filteredChampionships = useMemo(() => {
                         }
                         setSubMomentId(val ? Number(val) : undefined);
                         setActionIds([]);
-                        setOffensiveSequenceActionBySubMoment({});
+                        setDefensiveSequenceActionBySubMoment({});
                         setCornerTakerId(undefined);
                         setFreekickTakerId(undefined);
                         setPenaltyTakerId(undefined);
@@ -2962,17 +2964,17 @@ const filteredChampionships = useMemo(() => {
               <div className="flex items-center justify-between">
 
 
-                <label className="text-sm font-medium">Espaço de Recuperação</label>
+                <label className="text-sm font-medium">Espaço da Perda</label>
 
 
-                <span className="text-xs text-muted-foreground">{transitionRecoveryZoneLabel}</span>
+                <span className="text-xs text-muted-foreground">{transitionLossZoneLabel}</span>
 
 
               </div>
 
 
-              <RecoverySpaceGrid
-                variant={recoveryGridVariant}
+              <LossSpaceGrid
+                variant={lossGridVariant}
                 value={attackingSpaceId}
                 onChange={(zoneId) => setAttackingSpaceId(zoneId)}
               />
@@ -3167,12 +3169,12 @@ const filteredChampionships = useMemo(() => {
                     ? selectedActions.map((action) => action.name).join(", ")
                     : "-"}
                 </span>
-                {isOffensiveOrganizationMoment && (
+                {isDefensiveOrganizationMoment && (
                   <>
-                    <span className="text-muted-foreground">Sequência OO</span>
+                    <span className="text-muted-foreground">Sequência OD</span>
                     <span>
-                      {offensiveSequenceSummary.length > 0
-                        ? offensiveSequenceSummary
+                      {defensiveSequenceSummary.length > 0
+                        ? defensiveSequenceSummary
                             .map((entry) => `${entry.sequenceOrder}. ${entry.subMomentName}: ${entry.actionName ?? "—"}`)
                             .join(" | ")
                         : "-"}
@@ -3253,7 +3255,7 @@ const filteredChampionships = useMemo(() => {
 
                 {shouldShowTransitionStep && (
                   <>
-                    <span className="text-muted-foreground">Espaço de recuperação</span>
+                    <span className="text-muted-foreground">Espaço da perda</span>
                     <span>{attackingSpaceId ? `Zona ${attackingSpaceId}` : "N/A"}</span>
                   </>
                 )}
@@ -3370,10 +3372,10 @@ const filteredChampionships = useMemo(() => {
 
                 {shouldShowTransitionStep && (
                   <div className="space-y-1 rounded-xl border border-border/60 bg-card/60 p-3">
-                    <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Espaço de Recuperação</div>
+                    <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Espaço da Perda</div>
                     <div className="rounded-lg border border-border/50 bg-slate-950/60 p-2">
-                      <RecoverySpaceGrid
-                        variant={recoveryGridVariant}
+                      <LossSpaceGrid
+                        variant={lossGridVariant}
                         value={attackingSpaceId}
                         readOnly
                         showHelperText={false}

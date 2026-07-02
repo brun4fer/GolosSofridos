@@ -18,7 +18,7 @@ type MomentSeed = {
 
 const MOMENT_SEEDS: MomentSeed[] = [
   {
-    name: "Organiza\u00e7\u00e3o Ofensiva",
+    name: "Organiza\u00e7\u00e3o Defensiva",
     subMoments: [
       {
         name: "Sa\u00edda do GR",
@@ -66,10 +66,10 @@ const MOMENT_SEEDS: MomentSeed[] = [
     ]
   },
   {
-    name: "Transi\u00e7\u00e3o Ofensiva",
+    name: "Transi\u00e7\u00e3o Defensiva",
     subMoments: [
       {
-        name: "Recupera\u00e7\u00e3o meio campo defensivo",
+        name: "Perda no meio campo pr\u00f3prio",
         actions: [
           { name: "Cruzamento Direita", context: "field" },
           { name: "Cruzamento Esquerda", context: "field" },
@@ -79,7 +79,7 @@ const MOMENT_SEEDS: MomentSeed[] = [
         ]
       },
       {
-        name: "Recupera\u00e7\u00e3o meio campo ofensivo",
+        name: "Perda no meio campo advers\u00e1rio",
         actions: [
           { name: "Cruzamento Direita", context: "field" },
           { name: "Cruzamento Esquerda", context: "field" },
@@ -91,7 +91,7 @@ const MOMENT_SEEDS: MomentSeed[] = [
     ]
   },
   {
-    name: "Bolas Paradas",
+    name: "Bolas Paradas Defensivas",
     subMoments: [
       {
         name: "Lan\u00e7amento Lateral",

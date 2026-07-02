@@ -129,7 +129,7 @@ export default async function GoalDetail({ params }: { params: { id: string } })
     goal.transitionDrawing && typeof goal.transitionDrawing.x === "number" && typeof goal.transitionDrawing.y === "number"
       ? goal.transitionDrawing
       : null;
-  const isTransitionGoal = normalizeToken(goal.momentName).includes("transicao ofensiva");
+  const isTransitionGoal = normalizeToken(goal.momentName).includes("transicao defensiva");
   const hasTransitionDrawing = Boolean(transitionDrawing);
 
   const involvements = goal.involvements ?? [];
@@ -279,7 +279,7 @@ export default async function GoalDetail({ params }: { params: { id: string } })
 
               {isTransitionGoal && (
                 <>
-                  <span className="text-muted-foreground">Ponto de recuperacao</span>
+                  <span className="text-muted-foreground">Ponto da perda</span>
                   <span>{transitionDrawing ? `(${transitionDrawing.x.toFixed(2)}, ${transitionDrawing.y.toFixed(2)})` : "-"}</span>
                 </>
               )}
@@ -415,12 +415,12 @@ export default async function GoalDetail({ params }: { params: { id: string } })
 
         {isTransitionGoal && (
           <Card>
-            <CardHeader title="Ponto de Recuperacao" />
+            <CardHeader title="Ponto da Perda" />
             <CardContent>
               {hasTransitionDrawing && transitionDrawing ? (
                 <Pitch x={transitionDrawing.x} y={transitionDrawing.y} pinColor="#eab308" />
               ) : (
-                <div className="text-sm text-muted-foreground">Sem coordenadas de recuperacao.</div>
+                <div className="text-sm text-muted-foreground">Sem coordenadas da perda.</div>
               )}
             </CardContent>
           </Card>

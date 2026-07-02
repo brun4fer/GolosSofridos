@@ -28,9 +28,9 @@ type MomentOption = {
   name: string;
 };
 
-type BpoCategory = "corners" | "free_kicks" | "direct_free_kicks" | "throw_ins";
+type BpdCategory = "corners" | "free_kicks" | "direct_free_kicks" | "throw_ins";
 
-const BPO_FILTER_OPTIONS: Array<{ value: BpoCategory; label: string }> = [
+const BPD_FILTER_OPTIONS: Array<{ value: BpdCategory; label: string }> = [
   { value: "corners", label: "Cantos" },
   { value: "free_kicks", label: "Livres" },
   { value: "direct_free_kicks", label: "Livres Diretos" },
@@ -62,7 +62,7 @@ type SubMomentActionBreakdown = {
   actions: Array<{ action: string; goals: number; percent: number }>;
 };
 
-type RecoverySpaceBreakdown = {
+type LossSpaceBreakdown = {
   subMomentId: number;
   subMoment: string;
   totalGoals: number;
@@ -83,7 +83,7 @@ type RadiographyResponse = {
   freekickProfiles: Array<{ profile: string; goals: number }>;
   throwInProfiles: Array<{ profile: string; goals: number }>;
   subMomentActionBreakdown: SubMomentActionBreakdown[];
-  recoverySpaces: RecoverySpaceBreakdown[];
+  lossSpaces: LossSpaceBreakdown[];
   momentGoals: number;
   teamGoals: number;
   team: TeamOption | null;
@@ -146,10 +146,10 @@ const MAP_SVG_CLASS = "w-full aspect-[3/2]";
 const ACTION_BAR_COLOR = "rgba(34,211,238,0.72)";
 const ZERO_ACTION_BAR_BG_CLASS = "bg-muted/20";
 
-type RecoveryGridVariant = "defensive" | "offensive";
+type TransitionZoneVariant = "own" | "opponent";
 type TacticalZone = { id: number; x: number; y: number; width: number; height: number };
 
-const DEFENSIVE_RECOVERY_ZONES: TacticalZone[] = [
+const OWN_HALF_LOSS_ZONES: TacticalZone[] = [
   { id: 1, x: 8, y: 10, width: 26, height: 12 },
   { id: 2, x: 34, y: 10, width: 26, height: 12 },
   { id: 3, x: 8, y: 22, width: 26, height: 7 },
@@ -162,7 +162,7 @@ const DEFENSIVE_RECOVERY_ZONES: TacticalZone[] = [
   { id: 10, x: 34, y: 58, width: 26, height: 12 }
 ];
 
-const OFFENSIVE_RECOVERY_ZONES: TacticalZone[] = [
+const OPPONENT_HALF_LOSS_ZONES: TacticalZone[] = [
   { id: 1, x: 60, y: 10, width: 26, height: 12 },
   { id: 2, x: 86, y: 10, width: 26, height: 12 },
   { id: 3, x: 60, y: 22, width: 26, height: 7 },
@@ -197,18 +197,18 @@ const HIDDEN_ACTION_CHART_LABELS = new Set([
 const shouldHideActionFromChart = (actionName: string) =>
   HIDDEN_ACTION_CHART_LABELS.has(normalizeActionLabelToken(actionName));
 
-const isTransitionOffensiveMoment = (momentName?: string) =>
-  normalizeToken(momentName ?? "").includes("transicao ofensiva");
+const isTransitionDefensiveMoment = (momentName?: string) =>
+  normalizeToken(momentName ?? "").includes("transicao defensiva");
 
-const getRecoveryVariant = (subMomentName: string): RecoveryGridVariant | null => {
+const getLossVariant = (subMomentName: string): TransitionZoneVariant | null => {
   const normalized = normalizeToken(subMomentName);
-  if (normalized.includes("meio campo defensivo")) return "defensive";
-  if (normalized.includes("meio campo ofensivo")) return "offensive";
+  if (normalized.includes("meio campo proprio")) return "own";
+  if (normalized.includes("meio campo adversario")) return "opponent";
   return null;
 };
 
-const getRecoveryZones = (variant: RecoveryGridVariant) =>
-  variant === "defensive" ? DEFENSIVE_RECOVERY_ZONES : OFFENSIVE_RECOVERY_ZONES;
+const getLossZones = (variant: TransitionZoneVariant) =>
+  variant === "own" ? OWN_HALF_LOSS_ZONES : OPPONENT_HALF_LOSS_ZONES;
 
 const formatPercent = (value: number) => {
   if (!Number.isFinite(value)) return "0%";
@@ -553,17 +553,17 @@ function SubMomentActionCard({ row }: { row: SubMomentActionBreakdown }) {
   );
 }
 
-function TransitionRecoveryCard({ row }: { row: RecoverySpaceBreakdown }) {
-  const variant = getRecoveryVariant(row.subMoment);
+function TransitionLossCard({ row }: { row: LossSpaceBreakdown }) {
+  const variant = getLossVariant(row.subMoment);
   if (!variant) return null;
-  const tacticalZones = getRecoveryZones(variant);
+  const tacticalZones = getLossZones(variant);
   const zoneById = new Map(row.zones.map((zone) => [zone.zoneId, zone]));
   const maxZoneGoals = row.zones.reduce((max, zone) => Math.max(max, zone.goals), 0);
   const activeZones = row.zones
     .filter((zone) => zone.goals > 0)
     .sort((a, b) => (b.goals === a.goals ? a.zoneId - b.zoneId : b.goals - a.goals));
   const inertOverlay =
-    variant === "defensive" ? (
+    variant === "own" ? (
       <rect x="60" y="10" width="52" height="60" fill="rgba(2,6,23,0.68)" />
     ) : (
       <rect x="8" y="10" width="52" height="60" fill="rgba(2,6,23,0.68)" />
@@ -573,7 +573,7 @@ function TransitionRecoveryCard({ row }: { row: RecoverySpaceBreakdown }) {
     <Card className="bg-[#0c1420]/70 border border-border/60">
       <CardHeader
         title={row.subMoment}
-        description={`${row.totalGoals.toLocaleString("pt-PT")} golos com recuperação`}
+        description={`${row.totalGoals.toLocaleString("pt-PT")} golos após perda`}
       />
       <CardContent className="space-y-3">
         <div className={MAP_WRAPPER_CLASS}>
@@ -648,7 +648,7 @@ function TransitionRecoveryCard({ row }: { row: RecoverySpaceBreakdown }) {
           </div>
         ) : (
           <div className="rounded-xl border border-border/60 bg-slate-900/40 px-3 py-3 text-xs text-muted-foreground">
-            Sem registos em zonas de recuperação.
+            Sem registos em zonas da perda.
           </div>
         )}
       </CardContent>
@@ -674,33 +674,33 @@ export default function RadiographyPanel({
   const hasAppliedInitialTeam = useRef(false);
   const [momentOptions, setMomentOptions] = useState<MomentOption[]>([]);
   const [momentId, setMomentId] = useState<number | undefined>(undefined);
-  const [bpoCategory, setBpoCategory] = useState<BpoCategory | undefined>(undefined);
+  const [bpdCategory, setBpdCategory] = useState<BpdCategory | undefined>(undefined);
   const handleFilterChange = (value: string) => {
     const normalized = value.trim();
     if (!normalized) {
       setMomentId(undefined);
-      setBpoCategory(undefined);
+      setBpdCategory(undefined);
       return;
     }
     if (normalized.startsWith("moment:")) {
       const parsed = Number(normalized.slice("moment:".length));
       setMomentId(Number.isNaN(parsed) ? undefined : parsed);
-      setBpoCategory(undefined);
+      setBpdCategory(undefined);
       return;
     }
-    if (normalized.startsWith("bpo:")) {
-      const technical = normalized.slice("bpo:".length) as BpoCategory;
-      if (BPO_FILTER_OPTIONS.some((item) => item.value === technical)) {
-        setBpoCategory(technical);
+    if (normalized.startsWith("bpd:")) {
+      const technical = normalized.slice("bpd:".length) as BpdCategory;
+      if (BPD_FILTER_OPTIONS.some((item) => item.value === technical)) {
+        setBpdCategory(technical);
         setMomentId(undefined);
       } else {
         setMomentId(undefined);
-        setBpoCategory(undefined);
+        setBpdCategory(undefined);
       }
       return;
     }
     setMomentId(undefined);
-    setBpoCategory(undefined);
+    setBpdCategory(undefined);
   };
   const [radiography, setRadiography] = useState<RadiographyResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -838,7 +838,7 @@ export default function RadiographyPanel({
 
     const searchParams = new URLSearchParams();
     if (momentId) searchParams.set("momentId", String(momentId));
-    if (bpoCategory) searchParams.set("bpoCategory", bpoCategory);
+    if (bpdCategory) searchParams.set("bpdCategory", bpdCategory);
     const queryString = searchParams.toString();
     const endpoint = `/api/teams/${teamId}/radiography${queryString ? `?${queryString}` : ""}`;
 
@@ -864,21 +864,21 @@ export default function RadiographyPanel({
     return () => {
       isCancelled = true;
     };
-  }, [championshipId, teamId, selectedTeam, momentId, bpoCategory]);
+  }, [championshipId, teamId, selectedTeam, momentId, bpdCategory]);
 
   const distribution = useMemo(
     () => cleanDataset(radiography?.distribution ?? [], "category", "goals"),
     [radiography?.distribution]
   );
   const currentTeam = selectedTeam ?? radiography?.team;
-  const isSpecificFilterActive = Boolean(momentId || bpoCategory);
-  const isAllMomentsFilter = !momentId && !bpoCategory;
+  const isSpecificFilterActive = Boolean(momentId || bpdCategory);
+  const isAllMomentsFilter = !momentId && !bpdCategory;
   const selectedMoment = momentId ? momentOptions.find((moment) => moment.id === momentId) : undefined;
-  const selectedBpoFilter = bpoCategory ? BPO_FILTER_OPTIONS.find((option) => option.value === bpoCategory) : undefined;
-  const isTransitionMomentFilter = Boolean(selectedMoment && isTransitionOffensiveMoment(selectedMoment.name));
+  const selectedBpdFilter = bpdCategory ? BPD_FILTER_OPTIONS.find((option) => option.value === bpdCategory) : undefined;
+  const isTransitionMomentFilter = Boolean(selectedMoment && isTransitionDefensiveMoment(selectedMoment.name));
   const shouldShowTopPlayerRankings = isAllMomentsFilter;
   const shouldShowReferenceRanking = isTransitionMomentFilter;
-  const selectedFilterLabel = selectedMoment?.name ?? selectedBpoFilter?.label ?? "Filtro";
+  const selectedFilterLabel = selectedMoment?.name ?? selectedBpdFilter?.label ?? "Filtro";
   const momentGoalsValue = radiography?.momentGoals ?? 0;
   const teamGoalsValue = radiography?.teamGoals ?? 0;
   const goalShare = teamGoalsValue > 0 ? (momentGoalsValue / teamGoalsValue) * 100 : 0;
@@ -932,12 +932,12 @@ export default function RadiographyPanel({
       })),
     [radiography?.subMomentActionBreakdown]
   );
-  const transitionRecoveryBreakdown = useMemo(
+  const transitionLossBreakdown = useMemo(
     () =>
-      (radiography?.recoverySpaces ?? []).filter((entry) => {
-        return getRecoveryVariant(entry.subMoment) !== null;
+      (radiography?.lossSpaces ?? []).filter((entry) => {
+        return getLossVariant(entry.subMoment) !== null;
       }),
-    [radiography?.recoverySpaces]
+    [radiography?.lossSpaces]
   );
 
   if (!championshipsLoading && championshipOptions.length === 0) {
@@ -1009,7 +1009,7 @@ export default function RadiographyPanel({
             Momento
           </label>
           <Select
-            value={momentId ? `moment:${momentId}` : bpoCategory ? `bpo:${bpoCategory}` : ""}
+            value={momentId ? `moment:${momentId}` : bpdCategory ? `bpd:${bpdCategory}` : ""}
             onChange={(e) => handleFilterChange(e.target.value)}
             disabled={!teamId || !selectedTeam}
           >
@@ -1023,9 +1023,9 @@ export default function RadiographyPanel({
                 </option>
               ))}
             </optgroup>
-            <optgroup label="Bolas Paradas Ofensivas">
-              {BPO_FILTER_OPTIONS.map((option) => (
-                <option key={option.value} value={`bpo:${option.value}`} className="text-black">
+            <optgroup label="Bolas Paradas Defensivas">
+              {BPD_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={`bpd:${option.value}`} className="text-black">
                   {option.label}
                 </option>
               ))}
@@ -1126,20 +1126,20 @@ export default function RadiographyPanel({
               {isTransitionMomentFilter ? (
                 <div className="space-y-3">
                   <div className="text-xs uppercase tracking-[0.2em] text-cyan-200/80">
-                    Zonas de Recuperação
+                    Zonas da Perda
                   </div>
-                  {transitionRecoveryBreakdown.length > 0 ? (
+                  {transitionLossBreakdown.length > 0 ? (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      {transitionRecoveryBreakdown.map((entry) => (
-                        <TransitionRecoveryCard key={entry.subMomentId} row={entry} />
+                      {transitionLossBreakdown.map((entry) => (
+                        <TransitionLossCard key={entry.subMomentId} row={entry} />
                       ))}
                     </div>
                   ) : (
                     <Card className="bg-[#0c1420]/70 border border-border/60">
-                      <CardHeader title="Zonas de Recuperação" />
+                      <CardHeader title="Zonas da Perda" />
                       <CardContent>
                         <div className="rounded-xl border border-border/60 bg-slate-900/40 px-3 py-4 text-sm text-muted-foreground">
-                          Sem dados de recuperação para este filtro.
+                          Sem dados da perda para este filtro.
                         </div>
                       </CardContent>
                     </Card>

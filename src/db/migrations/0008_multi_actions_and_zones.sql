@@ -1,4 +1,4 @@
--- Multi-actions + zone/phase metadata for radiografia ofensiva
+-- Multi-actions + zone/phase metadata for radiografia defensiva
 CREATE TABLE IF NOT EXISTS "goal_actions" (
   "id" bigserial PRIMARY KEY NOT NULL,
   "goal_id" bigint NOT NULL REFERENCES "goals"("id") ON DELETE cascade,

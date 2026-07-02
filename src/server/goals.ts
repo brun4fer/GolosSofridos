@@ -14,15 +14,15 @@ function normalizeToken(value: string) {
     .toLowerCase();
 }
 
-function isTransitionRecoverySubMomentName(value: string) {
+function isTransitionLossSubMomentName(value: string) {
   const normalized = normalizeToken(value);
   return (
-    normalized.includes("recuperacao") &&
-    (normalized.includes("meio campo defensivo") || normalized.includes("meio campo ofensivo"))
+    normalized.includes("perda") &&
+    (normalized.includes("meio campo proprio") || normalized.includes("meio campo adversario"))
   );
 }
 
-const recoveryActionWhitelist = new Set([
+const transitionActionWhitelist = new Set([
   "cruzamento direita",
   "cruzamento esquerda",
   "remate fora de area",
@@ -30,8 +30,8 @@ const recoveryActionWhitelist = new Set([
   "profundidade"
 ]);
 
-const OFFENSIVE_ORGANIZATION_MOMENT = "organizacao ofensiva";
-const OFFENSIVE_ORGANIZATION_SEQUENCE = ["saida do gr", "construcao", "criacao", "finalizacao"] as const;
+const DEFENSIVE_ORGANIZATION_MOMENT = "organizacao defensiva";
+const DEFENSIVE_ORGANIZATION_SEQUENCE = ["saida do gr", "construcao", "criacao", "finalizacao"] as const;
 
 type GoalSubMomentSequenceEntry = {
   subMomentId: number;
@@ -39,7 +39,7 @@ type GoalSubMomentSequenceEntry = {
   sequenceOrder: number;
 };
 
-function normalizeRecoveryActionName(value: string) {
+function normalizeTransitionActionName(value: string) {
   const normalized = normalizeToken(value);
   if (normalized === "remate de fora da area") return "remate fora de area";
   return normalized;
@@ -362,8 +362,9 @@ function buildSequenceEntries(parsed: ReturnType<typeof goalInputSchema.parse>):
   ];
 }
 
-function isOffensiveOrganizationMomentName(value: string) {
-  return normalizeToken(value) === OFFENSIVE_ORGANIZATION_MOMENT;
+function isDefensiveOrganizationMomentName(value: string) {
+  const normalized = normalizeToken(value);
+  return normalized === DEFENSIVE_ORGANIZATION_MOMENT;
 }
 
 export async function getGoalsByTeam(teamId: number) {
@@ -798,15 +799,15 @@ async function upsertGoal(
     }
   });
 
-  const isOffensiveOrganizationMoment = isOffensiveOrganizationMomentName(moment.name);
-  if (isOffensiveOrganizationMoment) {
-    if (orderedSequenceEntries.length > OFFENSIVE_ORGANIZATION_SEQUENCE.length) {
-      throw new Error("Organizacao Ofensiva permite no maximo 4 fases.");
+  const isDefensiveOrganizationMoment = isDefensiveOrganizationMomentName(moment.name);
+  if (isDefensiveOrganizationMoment) {
+    if (orderedSequenceEntries.length > DEFENSIVE_ORGANIZATION_SEQUENCE.length) {
+      throw new Error("Organizacao Defensiva permite no maximo 4 fases.");
     }
   }
 
   const sequenceActionIds = [...new Set(orderedSequenceEntries.map((entry) => entry.actionId))];
-  const requestedActionIds = isOffensiveOrganizationMoment
+  const requestedActionIds = isDefensiveOrganizationMoment
     ? sequenceActionIds
     : parsed.actionIds.length > 0
       ? [...new Set(parsed.actionIds)]
@@ -831,23 +832,24 @@ async function upsertGoal(
     .map((actionId) => actionById.get(actionId))
     .filter((row): row is NonNullable<typeof row> => Boolean(row));
 
-  const isOffensiveTransitionMoment = normalizeToken(moment.name) === "transicao ofensiva";
-  let isOffensiveTransitionRecovery = false;
+  const normalizedMomentName = normalizeToken(moment.name);
+  const isDefensiveTransitionMoment = normalizedMomentName === "transicao defensiva";
+  let isDefensiveTransitionLoss = false;
   for (const entry of orderedSequenceEntries) {
     const sequenceSubMoment = subMomentById.get(entry.subMomentId);
     const sequenceAction = actionById.get(entry.actionId);
     if (!sequenceSubMoment || !sequenceAction) throw new Error("Sub-moment/action sequence invalida");
 
-    const isRecovery = isOffensiveTransitionMoment && isTransitionRecoverySubMomentName(sequenceSubMoment.name);
+    const isTransitionLoss = isDefensiveTransitionMoment && isTransitionLossSubMomentName(sequenceSubMoment.name);
     const wrongSubMoment = sequenceAction.subMomentId !== entry.subMomentId;
-    const canUseFallbackAction = isRecovery && recoveryActionWhitelist.has(normalizeRecoveryActionName(sequenceAction.name));
+    const canUseFallbackAction = isTransitionLoss && transitionActionWhitelist.has(normalizeTransitionActionName(sequenceAction.name));
     if (wrongSubMoment && !canUseFallbackAction) {
       throw new Error("All actions must belong to the selected sub-moment");
     }
-    if (isRecovery) isOffensiveTransitionRecovery = true;
+    if (isTransitionLoss) isDefensiveTransitionLoss = true;
   }
-  if (isOffensiveTransitionRecovery && !parsed.attackingSpaceId) {
-    throw new Error("Transicao Ofensiva de recuperacao requer attackingSpaceId.");
+  if (isDefensiveTransitionLoss && !parsed.attackingSpaceId) {
+    throw new Error("Transicao Defensiva por perda requer a zona da perda.");
   }
 
   const requiresGoal = requestedActionRows.some((action) => action.context === "field_goal");
@@ -947,8 +949,8 @@ async function upsertGoal(
     if (supportsThrowInTaker) goalValues.throwInTakerId = throwInTakerId;
     if (supportsReferencePlayer) goalValues.referencePlayerId = referencePlayerId;
     if (supportsAssistDrawing) goalValues.assistDrawing = parsed.assistDrawing ?? null;
-    if (supportsTransitionDrawing) goalValues.transitionDrawing = isOffensiveTransitionMoment ? parsed.transitionDrawing ?? null : null;
-    if (supportsAttackingSpace) goalValues.attackingSpaceId = isOffensiveTransitionRecovery ? parsed.attackingSpaceId ?? null : null;
+    if (supportsTransitionDrawing) goalValues.transitionDrawing = isDefensiveTransitionMoment ? parsed.transitionDrawing ?? null : null;
+    if (supportsAttackingSpace) goalValues.attackingSpaceId = isDefensiveTransitionLoss ? parsed.attackingSpaceId ?? null : null;
 
     const [goalRow] =
       mode === "create"

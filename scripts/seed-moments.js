@@ -5,7 +5,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const seeds = [
   {
-    name: "Organização Ofensiva",
+    name: "Organização Defensiva",
     sub: [
       { name: "Saída do GR", actions: ["Em organização", "Curto para longo", "Bola longa", "Jogador Referência"] },
       {
@@ -45,14 +45,14 @@ const seeds = [
     ]
   },
   {
-    name: "Transição Ofensiva",
-    sub: ["Recuperação meio campo defensivo", "Recuperação meio campo ofensivo"].map((subName) => ({
+    name: "Transição Defensiva",
+    sub: ["Perda no meio campo próprio", "Perda no meio campo adversário"].map((subName) => ({
       name: subName,
       actions: ["Cruzamento Direita", "Cruzamento Esquerda", "Remate Fora de Área", "Profundidade", "Jogador Referência"]
     }))
   },
   {
-    name: "Bola Parada Ofensiva (BPO)",
+    name: "Bolas Paradas Defensivas",
     sub: [
       { name: "Penalty", actions: ["Falta sobre", "Momento anterior"] },
       {
@@ -74,16 +74,24 @@ const seeds = [
 
 const renameMap = {
   // moments
-  "Organizacao Ofensiva": "Organização Ofensiva",
-  "Transicao Ofensiva": "Transição Ofensiva",
-  "Bola Parada Ofensiva": "Bola Parada Ofensiva (BPO)",
+  "Organizacao Ofensiva": "Organização Defensiva",
+  "Organização Ofensiva": "Organização Defensiva",
+  "Organizacao Defensiva": "Organização Defensiva",
+  "Transicao Ofensiva": "Transição Defensiva",
+  "Transição Ofensiva": "Transição Defensiva",
+  "Transicao Defensiva": "Transição Defensiva",
+  "Bola Parada Ofensiva": "Bolas Paradas Defensivas",
+  "Bola Parada Ofensiva (BPO)": "Bolas Paradas Defensivas",
+  "Bolas Paradas": "Bolas Paradas Defensivas",
   // sub-moments
   "Saida do GR": "Saída do GR",
   "Construcao": "Construção",
   "Criacao": "Criação",
   "Finalizacao": "Finalização",
-  "Recuperacao meio campo defensivo": "Recuperação meio campo defensivo",
-  "Recuperacao meio campo ofensivo": "Recuperação meio campo ofensivo",
+  "Recuperacao meio campo defensivo": "Perda no meio campo próprio",
+  "Recuperação meio campo defensivo": "Perda no meio campo próprio",
+  "Recuperacao meio campo ofensivo": "Perda no meio campo adversário",
+  "Recuperação meio campo ofensivo": "Perda no meio campo adversário",
   "Lancamento Lateral": "Lançamento Lateral",
   // actions
   "Remate exterior": "Remate de fora da área",

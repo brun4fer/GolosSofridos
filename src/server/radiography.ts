@@ -23,11 +23,11 @@ const normalizeToken = (value: string) =>
     .toLowerCase()
     .trim();
 
-const isTransitionRecoverySubMoment = (subMomentName: string) => {
+const isTransitionLossSubMoment = (subMomentName: string) => {
   const normalized = normalizeToken(subMomentName);
   return (
-    normalized.includes("recuperacao") &&
-    (normalized.includes("meio campo defensivo") || normalized.includes("meio campo ofensivo"))
+    normalized.includes("perda") &&
+    (normalized.includes("meio campo proprio") || normalized.includes("meio campo adversario"))
   );
 };
 
@@ -60,11 +60,11 @@ async function hasTable(tableName: string) {
   }
 }
 
-export type RadiographyBpoCategory = "corners" | "free_kicks" | "direct_free_kicks" | "throw_ins";
+export type RadiographyBpdCategory = "corners" | "free_kicks" | "direct_free_kicks" | "throw_ins";
 
 type RadiographyFilters = {
   momentId?: number;
-  bpoCategory?: RadiographyBpoCategory;
+  bpdCategory?: RadiographyBpdCategory;
 };
 
 export async function getRadiography(teamId: number, filters?: RadiographyFilters) {
@@ -72,8 +72,8 @@ export async function getRadiography(teamId: number, filters?: RadiographyFilter
   await ensureTeamMetadataColumns();
 
   const momentId = filters?.momentId;
-  const bpoCategory = filters?.bpoCategory;
-  const shouldComputeSubMomentBreakdown = Boolean(momentId || bpoCategory);
+  const bpdCategory = filters?.bpdCategory;
+  const shouldComputeSubMomentBreakdown = Boolean(momentId || bpdCategory);
   const hasGoalSubMomentActionsTable = await hasTable("goal_sub_moment_actions");
   const shouldUseRelationalBreakdown = hasGoalSubMomentActionsTable;
   const teamCondition = sql`g.team_id = ${teamId}`;
@@ -130,15 +130,15 @@ export async function getRadiography(teamId: number, filters?: RadiographyFilter
     )
     OR (${isFreeKickGoal} AND ${hasDirectAction})
   )`;
-  const bpoCondition = (() => {
-    if (!bpoCategory) return sql``;
-    if (bpoCategory === "corners") return sql` AND ${isCornerGoal}`;
-    if (bpoCategory === "free_kicks") return sql` AND ${isFreeKickGoal} AND NOT ${hasDirectAction}`;
-    if (bpoCategory === "direct_free_kicks") return sql` AND ${isDirectFreeKickGoal}`;
-    if (bpoCategory === "throw_ins") return sql` AND ${isThrowInGoal}`;
+  const bpdCondition = (() => {
+    if (!bpdCategory) return sql``;
+    if (bpdCategory === "corners") return sql` AND ${isCornerGoal}`;
+    if (bpdCategory === "free_kicks") return sql` AND ${isFreeKickGoal} AND NOT ${hasDirectAction}`;
+    if (bpdCategory === "direct_free_kicks") return sql` AND ${isDirectFreeKickGoal}`;
+    if (bpdCategory === "throw_ins") return sql` AND ${isThrowInGoal}`;
     return sql``;
   })();
-  const goalFilter = sql`${teamCondition}${momentCondition}${bpoCondition}`;
+  const goalFilter = sql`${teamCondition}${momentCondition}${bpdCondition}`;
   const distribution = db.execute<{ category: string; goals: number }>(sql`
     SELECT category, COUNT(*)::int AS goals
     FROM (
@@ -407,7 +407,7 @@ export async function getRadiography(teamId: number, filters?: RadiographyFilter
               LEFT JOIN ${goals} g
                 ON g.sub_moment_id = sm.id
                 AND g.team_id = ${teamId}
-                ${bpoCondition}
+                ${bpdCondition}
               WHERE sm.moment_id = ${momentId}
               GROUP BY sm.id, sm.name
               ORDER BY sm.name
@@ -471,7 +471,7 @@ export async function getRadiography(teamId: number, filters?: RadiographyFilter
             ORDER BY gal.sub_moment_id, goals DESC, a.name
           `);
 
-  const recoverySpaceRowsPromise: Promise<{
+  const lossSpaceRowsPromise: Promise<{
     rows: Array<{ subMomentId: number; subMoment: string; zoneId: number; goals: number }>;
   }> =
     !shouldComputeSubMomentBreakdown
@@ -520,7 +520,7 @@ export async function getRadiography(teamId: number, filters?: RadiographyFilter
     teamGoalsRows,
     subMomentTotalsRows,
     subMomentActionRows,
-    recoverySpaceRows
+    lossSpaceRows
   ] = await Promise.all([
     distribution,
     assistZones,
@@ -538,7 +538,7 @@ export async function getRadiography(teamId: number, filters?: RadiographyFilter
     teamGoalsCount,
     subMomentTotalsPromise,
     subMomentActionsPromise,
-    recoverySpaceRowsPromise
+    lossSpaceRowsPromise
   ]);
 
   const normalizeSectorValue = (value?: string | null) => {
@@ -656,32 +656,32 @@ export async function getRadiography(teamId: number, filters?: RadiographyFilter
     })
     .sort((a, b) => a.subMoment.localeCompare(b.subMoment));
 
-  const recoveryCountsBySubMoment = new Map<number, Map<number, number>>();
-  const recoveryNamesBySubMoment = new Map<number, string>();
-  for (const row of recoverySpaceRows.rows) {
-    if (!isTransitionRecoverySubMoment(row.subMoment)) continue;
-    const zoneMap = recoveryCountsBySubMoment.get(row.subMomentId) ?? new Map<number, number>();
+  const lossCountsBySubMoment = new Map<number, Map<number, number>>();
+  const lossNamesBySubMoment = new Map<number, string>();
+  for (const row of lossSpaceRows.rows) {
+    if (!isTransitionLossSubMoment(row.subMoment)) continue;
+    const zoneMap = lossCountsBySubMoment.get(row.subMomentId) ?? new Map<number, number>();
     zoneMap.set(row.zoneId, row.goals);
-    recoveryCountsBySubMoment.set(row.subMomentId, zoneMap);
-    recoveryNamesBySubMoment.set(row.subMomentId, row.subMoment);
+    lossCountsBySubMoment.set(row.subMomentId, zoneMap);
+    lossNamesBySubMoment.set(row.subMomentId, row.subMoment);
   }
 
-  const transitionRecoveryTotals = subMomentTotalsRows.rows.filter((row) => isTransitionRecoverySubMoment(row.subMoment));
-  const recoverySourceRows =
-    transitionRecoveryTotals.length > 0
-      ? transitionRecoveryTotals
-      : Array.from(recoveryNamesBySubMoment.entries()).map(([subMomentId, subMoment]) => ({
+  const transitionLossTotals = subMomentTotalsRows.rows.filter((row) => isTransitionLossSubMoment(row.subMoment));
+  const lossSourceRows =
+    transitionLossTotals.length > 0
+      ? transitionLossTotals
+      : Array.from(lossNamesBySubMoment.entries()).map(([subMomentId, subMoment]) => ({
           subMomentId,
           subMoment,
-          totalGoals: Array.from(recoveryCountsBySubMoment.get(subMomentId)?.values() ?? []).reduce(
+          totalGoals: Array.from(lossCountsBySubMoment.get(subMomentId)?.values() ?? []).reduce(
             (sum, value) => sum + value,
             0
           )
         }));
 
-  const recoverySpaces = recoverySourceRows
+  const lossSpaces = lossSourceRows
     .map((row) => {
-      const zoneMap = recoveryCountsBySubMoment.get(row.subMomentId) ?? new Map<number, number>();
+      const zoneMap = lossCountsBySubMoment.get(row.subMomentId) ?? new Map<number, number>();
       const zones = Array.from({ length: 10 }, (_, idx) => {
         const zoneId = idx + 1;
         const goals = zoneMap.get(zoneId) ?? 0;
@@ -717,7 +717,7 @@ export async function getRadiography(teamId: number, filters?: RadiographyFilter
     freekickProfiles: freekickProfileRows.rows,
     throwInProfiles: throwInProfileRows.rows,
     subMomentActionBreakdown,
-    recoverySpaces,
+    lossSpaces,
     momentGoals: momentGoalsRows.rows[0]?.goals ?? 0,
     teamGoals: teamGoalsRows.rows[0]?.goals ?? 0,
     team: teamMeta ? { ...teamMeta, emblemPath: onlyLocal(teamMeta.emblemPath) } : null

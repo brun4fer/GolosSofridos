@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { getRadiography, type RadiographyBpoCategory } from "@/server/radiography";
+import { getRadiography, type RadiographyBpdCategory } from "@/server/radiography";
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
   const teamId = Number(params.id);
@@ -17,21 +17,21 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
       }
       momentId = parsedMomentId;
     }
-    const rawBpoCategory = url.searchParams.get("bpoCategory");
-    const validBpoCategories: RadiographyBpoCategory[] = [
+    const rawBpdCategory = url.searchParams.get("bpdCategory");
+    const validBpdCategories: RadiographyBpdCategory[] = [
       "corners",
       "free_kicks",
       "direct_free_kicks",
       "throw_ins"
     ];
-    let bpoCategory: RadiographyBpoCategory | undefined;
-    if (rawBpoCategory !== null && rawBpoCategory.trim() !== "") {
-      if (!validBpoCategories.includes(rawBpoCategory as RadiographyBpoCategory)) {
-        return NextResponse.json({ error: "Invalid bpo category" }, { status: 400 });
+    let bpdCategory: RadiographyBpdCategory | undefined;
+    if (rawBpdCategory !== null && rawBpdCategory.trim() !== "") {
+      if (!validBpdCategories.includes(rawBpdCategory as RadiographyBpdCategory)) {
+        return NextResponse.json({ error: "Invalid bpd category" }, { status: 400 });
       }
-      bpoCategory = rawBpoCategory as RadiographyBpoCategory;
+      bpdCategory = rawBpdCategory as RadiographyBpdCategory;
     }
-    const data = await getRadiography(teamId, { momentId, bpoCategory });
+    const data = await getRadiography(teamId, { momentId, bpdCategory });
     return NextResponse.json(data);
   } catch (error) {
     console.error(error);

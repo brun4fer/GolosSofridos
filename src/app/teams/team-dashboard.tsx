@@ -366,7 +366,7 @@ export function TeamDashboard({ initialTeams }: { initialTeams: Team[] }) {
               {selectedTeam.radiographyPdfUrl && (
                 <Button variant="ghost" size="sm" className="gap-2">
                   <a href={selectedTeam.radiographyPdfUrl} target="_blank" rel="noreferrer">
-                    <FileText className="h-4 w-4" /> Radiografia Ofensiva (PDF)
+                    <FileText className="h-4 w-4" /> Radiografia Defensiva (PDF)
                   </a>
                 </Button>
               )}
