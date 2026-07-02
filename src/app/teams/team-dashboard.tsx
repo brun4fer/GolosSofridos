@@ -264,6 +264,7 @@ export function TeamDashboard({ initialTeams }: { initialTeams: Team[] }) {
   const goalsWithGoalPoint = goalEvents.filter((goal) => goal.goalCoordinates).length;
   const goalPageCount = Math.ceil(goalEvents.length / PAGE_SIZE);
   const paginatedGoalEvents = goalEvents.slice(goalPage * PAGE_SIZE, (goalPage + 1) * PAGE_SIZE);
+  const reportHref = teamId ? `/reports/season?teamId=${teamId}` : "#";
 
   useEffect(() => {
     setGoalPage(0);
@@ -382,9 +383,17 @@ export function TeamDashboard({ initialTeams }: { initialTeams: Team[] }) {
 
           <div className="flex items-center justify-between gap-3">
             <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Contexto pronto</div>
-            <Button variant="secondary" onClick={refreshAll} disabled={goalsQuery.isFetching}>
-              Atualizar
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" className="gap-2">
+                <Link href={reportHref} target="_blank">
+                  <FileText className="mr-2 inline h-4 w-4" />
+                  Gerar relatório PDF
+                </Link>
+              </Button>
+              <Button variant="secondary" onClick={refreshAll} disabled={goalsQuery.isFetching}>
+                Atualizar
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-4">
