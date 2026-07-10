@@ -1,7 +1,7 @@
 {
-  "name": "AP - Golos Sofridos",
-  "short_name": "AP - Golos Sofridos",
-  "description": "Plataforma profissional de golos sofridos e analise tactica.",
+  "name": "AP - Goals Conceded",
+  "short_name": "AP - Goals Conceded",
+  "description": "Professional goals conceded and tactical analysis platform.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

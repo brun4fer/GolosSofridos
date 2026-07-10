@@ -6,6 +6,7 @@ import { AppProvider } from "@/components/ui/app-context";
 import { Header } from "@/components/ui/header";
 import { Sidebar } from "@/components/ui/sidebar";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import { EnglishLocale } from "@/components/ui/english-locale";
 import { Space_Grotesk } from "next/font/google";
 
 const font = Space_Grotesk({
@@ -16,16 +17,16 @@ const font = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  applicationName: "AP - Golos Sofridos",
+  applicationName: "AP - Goals Conceded",
   title: {
-    default: "AP - Golos Sofridos",
-    template: "%s | AP - Golos Sofridos"
+    default: "AP - Goals Conceded",
+    template: "%s | AP - Goals Conceded"
   },
-  description: "Plataforma de golos sofridos e analise tactica.",
+  description: "Goals conceded and tactical analysis platform.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    title: "AP - Golos Sofridos",
+    title: "AP - Goals Conceded",
     statusBarStyle: "default"
   },
   icons: {
@@ -44,9 +45,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-PT" className={font.variable}>
+    <html lang="en" className={font.variable}>
       <body className="bg-background text-foreground">
         <ServiceWorkerRegister />
+        <EnglishLocale />
         <QueryProvider>
           <AppProvider>
             <div className="min-h-screen">
