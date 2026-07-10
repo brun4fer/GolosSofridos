@@ -24,6 +24,22 @@ const translations: Array<[string, string]> = [
   ["Selecionar época", "Select season"], ["Selecionar campeonato", "Select competition"],
   ["Selecionar adversário", "Select opponent"], ["Qualquer época", "Any season"],
   ["Abrir Configurações", "Open Settings"], ["Configurações", "Settings"],
+  ["Gerir equipas e plantéis", "Manage teams and squads"], ["Todas as equipas estão ligadas a um campeonato", "All teams are linked to a competition"],
+  ["Clubes existentes", "Existing clubs"], ["Treinador por definir", "Coach not set"],
+  ["Treinador", "Coach"], ["Nome do treinador", "Coach name"], ["Emblema (upload)", "Badge (upload)"],
+  ["Carregar emblema", "Upload badge"], ["Atualizar emblema", "Update badge"],
+  ["Relatório Vídeo", "Video Report"], ["Estádio", "Stadium"],
+  ["Dimensões do relvado", "Pitch dimensions"], ["Qualidade do relvado", "Pitch quality"],
+  ["Nome da equipa", "Team name"], ["Filtrar por Época", "Filter by Season"],
+  ["Filtrar por campeonato", "Filter by competition"], ["Nome do jogador", "Player name"],
+  ["Posição principal", "Primary position"], ["Posição secundária", "Secondary position"],
+  ["Posição terciária", "Third position"], ["Pé dominante", "Preferred foot"],
+  ["Gestão administrativa de épocas e campeonatos", "Season and competition administration"],
+  ["País", "Country"], ["Nenhuma época registada", "No seasons recorded"],
+  ["Ainda não existem jogadores", "There are no players yet"],
+  ["A guardar...", "Saving..."], ["Ficheiro guardado", "File stored"],
+  ["guardado localmente", "stored locally"], ["Guarda no servidor local", "Stored on the local server"],
+  ["Suporta", "Supports"], ["com URL pública", "with a public URL"],
   ["Campeonato", "Competition"], ["campeonato", "competition"], ["Época", "Season"], ["época", "season"],
   ["Equipas", "Teams"], ["Equipa", "Team"], ["equipa", "team"], ["Jogadores", "Players"],
   ["Jogador", "Player"], ["jogador", "player"], ["Golos Sofridos", "Goals Conceded"],
@@ -46,17 +62,27 @@ function translate(value: string) {
 
 function translateTree(root: Node) {
   if (root.nodeType === Node.TEXT_NODE) {
-    if (root.nodeValue) root.nodeValue = translate(root.nodeValue);
+    if (root.nodeValue) {
+      const translated = translate(root.nodeValue);
+      if (translated !== root.nodeValue) root.nodeValue = translated;
+    }
     return;
   }
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let node: Node | null;
-  while ((node = walker.nextNode())) if (node.nodeValue) node.nodeValue = translate(node.nodeValue);
+  while ((node = walker.nextNode())) {
+    if (!node.nodeValue) continue;
+    const translated = translate(node.nodeValue);
+    if (translated !== node.nodeValue) node.nodeValue = translated;
+  }
   if (root instanceof Element) {
     for (const element of [root, ...Array.from(root.querySelectorAll("[placeholder],[title],[aria-label],[alt]"))]) {
       for (const attribute of ["placeholder", "title", "aria-label", "alt"]) {
         const value = element.getAttribute(attribute);
-        if (value) element.setAttribute(attribute, translate(value));
+        if (value) {
+          const translated = translate(value);
+          if (translated !== value) element.setAttribute(attribute, translated);
+        }
       }
     }
   }

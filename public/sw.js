@@ -1,4 +1,4 @@
-const CACHE_VERSION = "ap-golos-sofridos-v2";
+const CACHE_VERSION = "ap-goals-conceded-v3";
 const ASSETS = [
   "/",
   "/offline.html",
