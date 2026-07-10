@@ -9,7 +9,7 @@ type CountRow = SeasonGoalReport["breakdowns"]["moments"][number];
 type MapPoint = SeasonGoalReport["maps"]["goalPoints"][number];
 
 const formatDate = (value: string) =>
-  new Intl.DateTimeFormat("pt-PT", {
+  new Intl.DateTimeFormat("en-GB", {
     dateStyle: "long",
     timeStyle: "short"
   }).format(new Date(value));
@@ -323,7 +323,7 @@ export default async function SeasonReportPage({ searchParams }: { searchParams:
 
           <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-300 pt-4 text-xs text-slate-500">
             <span>Gerado em {formatDate(report.generatedAt)}</span>
-            <span>AP - Golos Sofridos</span>
+            <span>AP - Goals Conceded</span>
           </footer>
         </div>
       </main>

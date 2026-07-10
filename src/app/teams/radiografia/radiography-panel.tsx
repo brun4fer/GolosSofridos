@@ -508,7 +508,7 @@ function SubMomentActionCard({ row }: { row: SubMomentActionBreakdown }) {
     <Card className="bg-[#0c1420]/70 border border-border/60">
       <CardHeader
         title={row.subMoment}
-        description={`${row.totalGoals.toLocaleString("pt-PT")} golos neste sub-momento`}
+        description={`${row.totalGoals.toLocaleString("en-GB")} goals in this sub-moment`}
       />
       <CardContent>
         {!hasActions ? (
@@ -573,7 +573,7 @@ function TransitionLossCard({ row }: { row: LossSpaceBreakdown }) {
     <Card className="bg-[#0c1420]/70 border border-border/60">
       <CardHeader
         title={row.subMoment}
-        description={`${row.totalGoals.toLocaleString("pt-PT")} golos após perda`}
+        description={`${row.totalGoals.toLocaleString("en-GB")} goals following a turnover`}
       />
       <CardContent className="space-y-3">
         <div className={MAP_WRAPPER_CLASS}>
@@ -1056,7 +1056,7 @@ export default function RadiographyPanel({
               <TopMetricCard
                 title="Percentagem de Golos Sofridos"
                 value={formattedGoalShare}
-                subtitle={`${momentGoalsValue.toLocaleString("pt-PT")} de ${teamGoalsValue.toLocaleString("pt-PT")} golos sofridos`}
+                subtitle={`${momentGoalsValue.toLocaleString("en-GB")} of ${teamGoalsValue.toLocaleString("en-GB")} goals conceded`}
               />
               <TopMetricCard
                 title="Jogador referência"
@@ -1066,7 +1066,7 @@ export default function RadiographyPanel({
               />
               <TopMetricCard
                 title="Golos com baliza"
-                value={goalEntryPoints.length.toLocaleString("pt-PT")}
+                value={goalEntryPoints.length.toLocaleString("en-GB")}
                 subtitle="com ponto de entrada registado"
               />
               <TopMetricCard
@@ -1079,7 +1079,7 @@ export default function RadiographyPanel({
               />
               <TopMetricCard
                 title="Total de Golos Sofridos"
-                value={momentGoalsValue.toLocaleString("pt-PT")}
+                value={momentGoalsValue.toLocaleString("en-GB")}
                 subtitle={`Filtro: ${selectedFilterLabel}`}
               />
             </div>

@@ -1,4 +1,4 @@
-const CACHE_VERSION = "ap-goals-conceded-v3";
+const CACHE_VERSION = "ap-goals-conceded-v5";
 const ASSETS = [
   "/",
   "/offline.html",
