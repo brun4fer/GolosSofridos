@@ -3,7 +3,8 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { ZodError, z } from "zod";
 import { db } from "@/db/client";
-import { actions } from "@/schema/schema";
+import { eq } from "drizzle-orm";
+import { actions, goalActions, goals, goalSubMomentActions } from "@/schema/schema";
 import { ensureActionsContextColumn } from "@/server/schema-maintenance";
 
 const schema = z.object({
@@ -25,6 +26,36 @@ export async function POST(req: Request) {
   } catch (error) {
     const status = error instanceof ZodError ? 400 : 500;
     const message = error instanceof ZodError ? error.flatten() : (error as Error).message;
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const id = z.number().int().positive().parse(Number(new URL(req.url).searchParams.get("id")));
+    const action = await db.query.actions.findFirst({ where: (fields, { eq }) => eq(fields.id, id) });
+    if (!action) return NextResponse.json({ error: "A ação não existe." }, { status: 404 });
+
+    const [directGoal, linkedGoal, sequencedGoal] = await Promise.all([
+      db.query.goals.findFirst({ where: eq(goals.actionId, id), columns: { id: true } }),
+      db.query.goalActions.findFirst({ where: eq(goalActions.actionId, id), columns: { id: true } }),
+      db.query.goalSubMomentActions.findFirst({
+        where: eq(goalSubMomentActions.actionId, id),
+        columns: { id: true }
+      })
+    ]);
+    if (directGoal || linkedGoal || sequencedGoal) {
+      return NextResponse.json(
+        { error: "Esta ação está associada a golos e não pode ser eliminada." },
+        { status: 409 }
+      );
+    }
+
+    await db.delete(actions).where(eq(actions.id, id));
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    const status = error instanceof ZodError ? 400 : 500;
+    const message = error instanceof ZodError ? "Identificador de ação inválido." : (error as Error).message;
     return NextResponse.json({ error: message }, { status });
   }
 }

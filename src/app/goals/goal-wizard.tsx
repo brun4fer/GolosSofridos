@@ -30,6 +30,7 @@ import { useAppContext } from "@/components/ui/app-context";
 
 import { FileUpload } from "@/components/ui/file-upload";
 import { cn } from "@/lib/utils";
+import { Trash2 } from "lucide-react";
 
 
 
@@ -1556,9 +1557,16 @@ const filteredChampionships = useMemo(() => {
       }
     });
 
-    return transitionActionOrder
+    const orderedTransitionActions = transitionActionOrder
       .map((canonical) => actionByCanonical.get(canonical))
       .filter((action): action is LookupAction => Boolean(action));
+
+    // Keep the predefined transition actions in their tactical order, but do
+    // not hide custom actions created specifically for this sub-moment.
+    const orderedIds = new Set(orderedTransitionActions.map((action) => action.id));
+    const customSubMomentActions = bySubMoment.filter((action) => !orderedIds.has(action.id));
+
+    return [...orderedTransitionActions, ...customSubMomentActions];
   }, [lookupsQuery.data, subMomentId, isDefensiveTransitionLoss, isDefensiveOrganizationMoment]);
 
   useEffect(() => {
@@ -2030,6 +2038,19 @@ const filteredChampionships = useMemo(() => {
     await qc.invalidateQueries({ queryKey: ["lookups"] });
 
 
+  }
+
+  async function handleDeleteAction(action: LookupAction) {
+    if (!window.confirm(`Eliminar a ação “${action.name}”?`)) return;
+
+    try {
+      await fetchJson(`/api/lookups/actions?id=${action.id}`, { method: "DELETE" });
+      setActionIds((current) => current.filter((id) => id !== action.id));
+      await qc.invalidateQueries({ queryKey: ["lookups"] });
+      setMessage(`A ação “${action.name}” foi eliminada.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível eliminar a ação.");
+    }
   }
 
 
@@ -2797,9 +2818,24 @@ const filteredChampionships = useMemo(() => {
                                   {action.context === "field_goal" ? "Campo + Baliza" : "Campo"}
                                 </p>
                               </div>
-                              <span className="rounded-full border border-current px-2 py-0.5 text-[11px] font-semibold">
-                                {isSelected ? "Selecionado" : "Selecionar"}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="rounded-full border border-current px-2 py-0.5 text-[11px] font-semibold">
+                                  {isSelected ? "Selecionado" : "Selecionar"}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="rounded-md p-1.5 text-red-300 transition hover:bg-red-500/15 hover:text-red-200"
+                                  aria-label={`Eliminar ação ${action.name}`}
+                                  title="Eliminar ação"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    void handleDeleteAction(action);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
                             </label>
                           );
                         })}
