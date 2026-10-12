@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { logoutAction } from "@/actions/auth";
-import { LanguageSelector } from "@/components/ui/language-selector";
 
 type HeaderProps = { user: { username: string; workspaceName: string } };
 
@@ -43,7 +42,6 @@ export function Header({ user }: HeaderProps) {
           <Link href="/rankings" className="rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-white/5">
             Rankings
           </Link>
-          <LanguageSelector />
           <Link href="/account" className="ml-2 rounded-lg border border-border/70 px-3 py-1.5 text-right leading-tight hover:bg-white/5">
             <span className="block text-xs font-semibold text-foreground">{user.username}</span>
             <span className="block text-[10px] text-muted-foreground">{user.workspaceName}</span>

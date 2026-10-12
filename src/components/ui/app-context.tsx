@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { EnglishLocale } from "@/components/ui/english-locale";
 
 export type Selection = {
   seasonId?: number;
@@ -12,15 +11,10 @@ export type Selection = {
   teamId?: number;
 };
 
-export type Locale = "en" | "pt";
-export const LOCALE_STORAGE_KEY = "goals-conceded.locale";
-
 type AppContextValue = {
   selection: Selection;
   setSelection: (sel: Selection) => void;
   updatePartial: (partial: Partial<Selection>) => void;
-  locale: Locale;
-  setLocale: (locale: Locale) => void;
 };
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
@@ -30,10 +24,6 @@ export function AppProvider({ children, storageNamespace = "default" }: { childr
   // Start empty on both server and client to keep SSR/CSR markup aligned; then hydrate from localStorage.
   const [selection, setSelectionState] = useState<Selection>({});
   const [hydratedStorageKey, setHydratedStorageKey] = useState<string | null>(null);
-  const [locale, setLocale] = useState<Locale>(() => {
-    if (typeof window === "undefined") return "en";
-    return window.localStorage.getItem(LOCALE_STORAGE_KEY) === "pt" ? "pt" : "en";
-  });
 
   const setSelection = (sel: Selection) => {
     setSelectionState(sel);
@@ -68,9 +58,9 @@ export function AppProvider({ children, storageNamespace = "default" }: { childr
     }
   }, [hydratedStorageKey, selection, storageKey]);
 
-  const value = useMemo(() => ({ selection, setSelection, updatePartial, locale, setLocale }), [selection, locale]);
+  const value = useMemo(() => ({ selection, setSelection, updatePartial }), [selection]);
 
-  return <AppContext.Provider value={value}><EnglishLocale locale={locale} />{children}</AppContext.Provider>;
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
 export function useAppContext() {

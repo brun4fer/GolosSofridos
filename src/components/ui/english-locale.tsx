@@ -286,16 +286,15 @@ function translateTree(root: Node, locale: "en" | "pt") {
   }
 }
 
-export function EnglishLocale({ locale = "en" }: { locale?: "en" | "pt" }) {
+export function EnglishLocale() {
   useEffect(() => {
-    document.documentElement.lang = locale === "pt" ? "pt-PT" : "en";
-    translateTree(document.body, locale);
-    const observer = new MutationObserver((mutations) => mutations.forEach((mutation) => {
-      if (mutation.type === "characterData") translateTree(mutation.target, locale);
-      mutation.addedNodes.forEach((node) => translateTree(node, locale));
-    }));
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
-  }, [locale]);
+    document.documentElement.lang = "en";
+    // This is deliberately a bounded translation pass. A permanent DOM observer
+    // can process React updates recursively and make the browser unresponsive.
+    const translatePage = () => translateTree(document.body, "en");
+    translatePage();
+    const delayedPass = window.setTimeout(translatePage, 750);
+    return () => window.clearTimeout(delayedPass);
+  }, []);
   return null;
 }

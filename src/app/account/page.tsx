@@ -1,7 +1,6 @@
 import Image from "next/image";
 import { logoutAction, updateCredentialsAction } from "@/actions/auth";
 import { requireUser } from "@/lib/auth";
-import { LanguageSelector } from "@/components/ui/language-selector";
 
 const errorMessages: Record<string, string> = {
   username: "The username must contain 3 to 40 letters, numbers or . _ -",
@@ -16,8 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function AccountPage({ searchParams }: { searchParams: { error?: string } }) {
   const user = await requireUser({ allowPasswordChange: true });
   return (
-    <main className="relative grid min-h-screen place-items-center px-4 py-10">
-      <div className="absolute right-4 top-4"><LanguageSelector /></div>
+    <main className="grid min-h-screen place-items-center px-4 py-10">
       <div className="w-full max-w-xl space-y-5">
         <div className="flex items-center gap-3">
           <Image src="/icon-192.png" alt="" width={44} height={44} className="rounded-xl" priority />
