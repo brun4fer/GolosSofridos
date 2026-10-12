@@ -3,9 +3,12 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { createGoal, getGoalsByTeam } from "@/server/goals";
+import { requireUser } from "@/lib/auth";
 import { teamParamSchema } from "@/lib/validation";
 
 export async function GET(req: Request) {
+  await requireUser();
+
   const { searchParams } = new URL(req.url);
   try {
     const { teamId } = teamParamSchema.parse({ teamId: searchParams.get("teamId") });
@@ -20,6 +23,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  await requireUser();
+
   try {
     const json = await req.json();
     // Normalize payload before validation/insert

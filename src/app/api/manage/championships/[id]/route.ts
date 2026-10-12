@@ -2,9 +2,12 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { requireUser } from "@/lib/auth";
 import { deleteChampionship, updateChampionship } from "@/server/admin";
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
+  await requireUser();
+
   try {
     const body = await req.json();
     const updated = await updateChampionship(Number(params.id), body);
@@ -17,6 +20,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 }
 
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+  await requireUser();
   await deleteChampionship(Number(params.id));
   return NextResponse.json({ ok: true });
 }

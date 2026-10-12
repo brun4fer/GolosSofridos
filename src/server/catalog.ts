@@ -1,9 +1,11 @@
 import { db } from "../db/client";
 import { championships, players, seasons, teams } from "../schema/schema";
 import { and, eq, asc } from "drizzle-orm";
-import { ensurePlayerProfileColumns, ensureTeamMetadataColumns } from "./schema-maintenance";
+import { getWorkspaceId } from "@/lib/auth";
+import { requireOwnedTeam } from "./workspace";
 
 export async function listChampionships() {
+  const workspaceId = await getWorkspaceId();
   return db
     .select({
       id: championships.id,
@@ -11,11 +13,12 @@ export async function listChampionships() {
       seasonId: championships.seasonId
     })
     .from(championships)
+    .where(eq(championships.workspaceId, workspaceId))
     .orderBy(asc(championships.name));
 }
 
 export async function listTeams(championshipId?: number, seasonId?: number) {
-  await ensureTeamMetadataColumns();
+  const workspaceId = await getWorkspaceId();
 
   const base = db
     .select({
@@ -37,7 +40,7 @@ export async function listTeams(championshipId?: number, seasonId?: number) {
     .innerJoin(championships, eq(teams.championshipId, championships.id))
     .innerJoin(seasons, eq(championships.seasonId, seasons.id));
 
-  const filters = [];
+  const filters = [eq(teams.workspaceId, workspaceId)];
   if (championshipId) filters.push(eq(teams.championshipId, championshipId));
   if (seasonId) filters.push(eq(championships.seasonId, seasonId));
 
@@ -47,7 +50,7 @@ export async function listTeams(championshipId?: number, seasonId?: number) {
 }
 
 export async function listPlayers(teamId: number) {
-  await ensurePlayerProfileColumns();
+  await requireOwnedTeam(teamId);
 
   return db
     .select({

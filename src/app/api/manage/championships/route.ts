@@ -2,14 +2,18 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { requireUser } from "@/lib/auth";
 import { createChampionship, listChampionships, listSeasons } from "@/server/admin";
 
 export async function GET() {
+  await requireUser();
   const [champs, seasons] = await Promise.all([listChampionships(), listSeasons()]);
   return NextResponse.json({ championships: champs, seasons });
 }
 
 export async function POST(req: Request) {
+  await requireUser();
+
   try {
     const body = await req.json();
     const created = await createChampionship(body);

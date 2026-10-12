@@ -61,11 +61,13 @@ export const goalInputSchema = z
     previousMomentDescription: z.string().optional().or(z.literal("")).nullable(),
     goalCoordinates: pointSchema.optional().nullable(),
     videoPath: z.string().optional().or(z.literal("")).nullable(),
+    mediaAssetId: z.string().trim().min(1).max(120).optional().or(z.literal("")).nullable(),
     fieldDrawing: fieldDrawingSchema.optional(),
     assistCoordinates: zoneMarkerSchema.optional().nullable(),
     assistDrawing: pointSchema.optional().nullable(),
     transitionDrawing: pointSchema.optional().nullable(),
     attackingSpaceId: z.number().int().min(1).max(10).optional().nullable(),
+    attackDirection: z.enum(["left_to_right", "right_to_left"]).default("left_to_right"),
     cornerProfile: setPieceProfile.optional().nullable(),
     freekickProfile: setPieceProfile.optional().nullable(),
     throwInProfile: throwProfile.optional().nullable(),
@@ -81,22 +83,13 @@ export const goalInputSchema = z
       .optional()
   })
   .superRefine((value, ctx) => {
-    const hasSingleFlow = Boolean(value.subMomentId && value.actionIds.length > 0);
-    const hasSequenceFlow = Boolean(value.subMomentSequence && value.subMomentSequence.length > 0);
-    if (!hasSingleFlow && !hasSequenceFlow) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["subMomentSequence"],
-        message: "Fornece subMomentSequence ou subMomentId + actionIds."
-      });
-    }
     if (value.subMomentSequence && value.subMomentSequence.length > 0) {
-      const sequenceOrders = value.subMomentSequence.map((entry) => entry.sequenceOrder);
-      if (new Set(sequenceOrders).size !== sequenceOrders.length) {
+      const actionPairs = value.subMomentSequence.map((entry) => `${entry.subMomentId}:${entry.actionId}`);
+      if (new Set(actionPairs).size !== actionPairs.length) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["subMomentSequence"],
-          message: "sequenceOrder duplicado em subMomentSequence."
+          message: "A mesma acao nao pode estar repetida dentro da mesma fase."
         });
       }
     }

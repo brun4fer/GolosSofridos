@@ -1,16 +1,86 @@
-import { pgTable, bigserial, bigint, serial, smallint, integer, text, date, jsonb, index, uniqueIndex, check } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  bigserial,
+  bigint,
+  serial,
+  smallint,
+  integer,
+  text,
+  date,
+  jsonb,
+  boolean,
+  timestamp,
+  uuid,
+  varchar,
+  index,
+  uniqueIndex,
+  check
+} from "drizzle-orm/pg-core";
 import { desc, sql } from "drizzle-orm";
 
 export type CoordinatePoint = { x: number; y: number };
 export type ZoneMarker = { x?: number; y?: number; label?: string; sector?: string };
 
+export const workspaces = pgTable(
+  "workspaces",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    name: varchar("name", { length: 120 }).notNull(),
+    slug: varchar("slug", { length: 80 }).notNull()
+  },
+  (table) => ({ slugUnique: uniqueIndex("workspaces_slug_unique").on(table.slug) })
+);
+
+export const users = pgTable(
+  "users",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    username: varchar("username", { length: 80 }).notNull(),
+    passwordHash: text("password_hash").notNull(),
+    workspaceId: bigint("workspace_id", { mode: "number" })
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "restrict" }),
+    mustChangePassword: boolean("must_change_password").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow()
+  },
+  (table) => ({
+    usernameUnique: uniqueIndex("users_username_unique").on(sql`lower(${table.username})`),
+    workspaceIdx: index("users_workspace_id_idx").on(table.workspaceId)
+  })
+);
+
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: uuid("id").primaryKey(),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    userId: bigint("user_id", { mode: "number" })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow()
+  },
+  (table) => ({
+    tokenUnique: uniqueIndex("sessions_token_hash_unique").on(table.tokenHash),
+    userIdx: index("sessions_user_id_idx").on(table.userId),
+    expiresIdx: index("sessions_expires_at_idx").on(table.expiresAt)
+  })
+);
+
 export const seasons = pgTable(
   "seasons",
   {
     id: bigserial("id", { mode: "number" }).primaryKey(),
-    name: text("name").notNull().unique(),
-    description: text("description")
-  }
+    name: text("name").notNull(),
+    description: text("description"),
+    workspaceId: bigint("workspace_id", { mode: "number" })
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "restrict" })
+  },
+  (table) => ({
+    workspaceIdx: index("idx_seasons_workspace").on(table.workspaceId),
+    nameWorkspaceUnique: uniqueIndex("seasons_name_workspace_unique").on(table.name, table.workspaceId)
+  })
 );
 
 export const championships = pgTable(
@@ -20,12 +90,16 @@ export const championships = pgTable(
     seasonId: bigint("season_id", { mode: "number" })
       .notNull()
       .references(() => seasons.id, { onDelete: "cascade" }),
+    workspaceId: bigint("workspace_id", { mode: "number" })
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "restrict" }),
     country: text("country").notNull(),
     name: text("name").notNull(),
     logo: text("logo")
   },
   (table) => ({
-    idxSeason: index("idx_championships_season").on(table.seasonId)
+    idxSeason: index("idx_championships_season").on(table.seasonId),
+    idxWorkspace: index("idx_championships_workspace").on(table.workspaceId)
   })
 );
 
@@ -36,6 +110,9 @@ export const teams = pgTable(
     championshipId: bigint("championship_id", { mode: "number" })
       .notNull()
       .references(() => championships.id, { onDelete: "cascade" }),
+    workspaceId: bigint("workspace_id", { mode: "number" })
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
     emblemPath: text("emblem_path"),
     radiographyPdfUrl: text("radiography_pdf_url"),
@@ -48,7 +125,12 @@ export const teams = pgTable(
   },
   (table) => ({
     idxChampionship: index("idx_teams_championship").on(table.championshipId),
-    uniqueName: uniqueIndex("teams_name_key").on(table.name)
+    idxWorkspace: index("idx_teams_workspace").on(table.workspaceId),
+    uniqueName: uniqueIndex("teams_name_workspace_championship_unique").on(
+      table.name,
+      table.workspaceId,
+      table.championshipId
+    )
   })
 );
 
@@ -114,14 +196,44 @@ export const actions = pgTable(
       .notNull()
       .references(() => subMoments.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    workspaceId: bigint("workspace_id", { mode: "number" }).references(() => workspaces.id, {
+      onDelete: "cascade"
+    }),
     context: text("context")
       .notNull()
       .default("field_goal")
-      .$type<"field" | "field_goal">()
+      .$type<"field" | "field_goal">(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true)
   },
   (table) => ({
-    uniqueSubMomentName: uniqueIndex("actions_sub_moment_name_key").on(table.subMomentId, table.name),
+    workspaceIdx: index("idx_actions_workspace").on(table.workspaceId),
     contextCheck: check("actions_context_check", sql`${table.context} IN ('field','field_goal')`)
+  })
+);
+
+export const mediaAssets = pgTable(
+  "media_assets",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: bigint("workspace_id", { mode: "number" })
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    fileName: varchar("file_name", { length: 255 }).notNull(),
+    fileSize: bigint("file_size", { mode: "number" }).notNull(),
+    durationSeconds: integer("duration_seconds").notNull().default(0),
+    mimeType: varchar("mime_type", { length: 120 }).notNull(),
+    storageKey: text("storage_key").notNull(),
+    storageStatus: varchar("storage_status", { length: 20 }).notNull().default("UPLOADING"),
+    etag: text("etag"),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow()
+  },
+  (table) => ({
+    workspaceIdx: index("idx_media_assets_workspace").on(table.workspaceId),
+    storageKeyUnique: uniqueIndex("media_assets_storage_key_unique").on(table.storageKey),
+    statusCheck: check("media_assets_storage_status_check", sql`${table.storageStatus} IN ('UPLOADING','READY','FAILED')`)
   })
 );
 
@@ -142,12 +254,11 @@ export const goals = pgTable(
       .notNull()
       .references(() => moments.id),
     subMomentId: bigint("sub_moment_id", { mode: "number" })
-      .notNull()
       .references(() => subMoments.id),
     actionId: bigint("action_id", { mode: "number" })
-      .notNull()
       .references(() => actions.id),
     videoPath: text("video_path"),
+    mediaAssetId: text("media_asset_id"),
     goalZoneId: smallint("goal_zone_id").references(() => goalkeeperZones.id),
     cornerTakerId: bigint("corner_taker_id", { mode: "number" }).references(() => players.id),
     freekickTakerId: bigint("freekick_taker_id", { mode: "number" }).references(() => players.id),
@@ -163,6 +274,10 @@ export const goals = pgTable(
     assistDrawing: jsonb("assist_drawing").$type<CoordinatePoint | null>(),
     transitionDrawing: jsonb("transition_drawing").$type<CoordinatePoint | null>(),
     attackingSpaceId: integer("attacking_space_id"),
+    attackDirection: text("attack_direction")
+      .notNull()
+      .default("left_to_right")
+      .$type<"left_to_right" | "right_to_left">(),
     assistSector: text("assist_sector"),
     shotSector: text("shot_sector"),
     finishSector: text("finish_sector"),
@@ -180,6 +295,7 @@ export const goals = pgTable(
     idxAssist: index("idx_goals_assist").on(table.assistId),
     idxMoment: index("idx_goals_moment").on(table.momentId),
     idxAction: index("idx_goals_action").on(table.actionId),
+    idxMediaAsset: index("idx_goals_media_asset").on(table.mediaAssetId),
     idxZone: index("idx_goals_zone").on(table.goalZoneId),
     idxCornerTaker: index("idx_goals_corner_taker").on(table.cornerTakerId),
     idxFreekickTaker: index("idx_goals_freekick_taker").on(table.freekickTakerId),
@@ -187,7 +303,11 @@ export const goals = pgTable(
     idxCrossAuthor: index("idx_goals_cross_author").on(table.crossAuthorId),
     idxThrowInTaker: index("idx_goals_throw_in_taker").on(table.throwInTakerId),
     idxReferencePlayer: index("idx_goals_reference_player").on(table.referencePlayerId),
-    idxFoulSufferedBy: index("idx_goals_foul_suffered_by").on(table.foulSufferedById)
+    idxFoulSufferedBy: index("idx_goals_foul_suffered_by").on(table.foulSufferedById),
+    attackDirectionCheck: check(
+      "goals_attack_direction_check",
+      sql`${table.attackDirection} IN ('left_to_right','right_to_left')`
+    )
   })
 );
 
@@ -207,8 +327,12 @@ export const goalSubMomentActions = pgTable(
     sequenceOrder: integer("sequence_order").notNull()
   },
   (table) => ({
-    uniqGoalSequenceOrder: uniqueIndex("goal_sub_moment_actions_goal_sequence_key").on(table.goalId, table.sequenceOrder),
-    uniqGoalSubMoment: uniqueIndex("goal_sub_moment_actions_goal_sub_moment_key").on(table.goalId, table.subMomentId),
+    uniqGoalSubMomentAction: uniqueIndex("goal_sub_moment_actions_goal_sub_moment_action_key").on(
+      table.goalId,
+      table.subMomentId,
+      table.actionId
+    ),
+    idxGoalSequence: index("idx_goal_sub_moment_actions_goal_sequence").on(table.goalId, table.sequenceOrder),
     idxGoal: index("idx_goal_sub_moment_actions_goal").on(table.goalId),
     idxSubMoment: index("idx_goal_sub_moment_actions_sub_moment").on(table.subMomentId),
     idxAction: index("idx_goal_sub_moment_actions_action").on(table.actionId),
@@ -254,6 +378,8 @@ export const goalInvolvements = pgTable(
 );
 
 export type Season = typeof seasons.$inferSelect;
+export type Workspace = typeof workspaces.$inferSelect;
+export type User = typeof users.$inferSelect;
 export type Championship = typeof championships.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Player = typeof players.$inferSelect;
@@ -261,3 +387,4 @@ export type Goal = typeof goals.$inferSelect;
 export type GoalSubMomentAction = typeof goalSubMomentActions.$inferSelect;
 export type GoalAction = typeof goalActions.$inferSelect;
 export type GoalInvolvement = typeof goalInvolvements.$inferSelect;
+export type MediaAsset = typeof mediaAssets.$inferSelect;

@@ -1,9 +1,12 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth";
 import { listTeams } from "@/server/catalog";
 
 export async function GET(req: Request) {
+  await requireUser();
+
   const { searchParams } = new URL(req.url);
   const championshipParam = searchParams.get("championshipId");
   const seasonParam = searchParams.get("seasonId");

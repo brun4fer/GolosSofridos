@@ -15,6 +15,20 @@
       "when": 1771243200000,
       "tag": "0002_pinpoint",
       "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791504000000,
+      "tag": "0022_accounts_workspaces_actions_media",
+      "breakpoints": false
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791763200000,
+      "tag": "0023_shared_media_library",
+      "breakpoints": false
     }
   ]
 }

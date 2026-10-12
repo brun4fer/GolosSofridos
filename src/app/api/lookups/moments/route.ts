@@ -1,15 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { ZodError, z } from "zod";
 import { db } from "@/db/client";
-import { moments } from "@/schema/schema";
-import { ensureDefensiveTaxonomyNames } from "@/server/lookups";
-
-const schema = z.object({ name: z.string().min(2) });
+import { requireUser } from "@/lib/auth";
 
 export async function GET() {
-  await ensureDefensiveTaxonomyNames();
+  await requireUser();
   const rows = await db.query.moments.findMany({
     columns: { id: true, name: true },
     orderBy: (fields, { asc }) => [asc(fields.name)]
@@ -17,16 +13,7 @@ export async function GET() {
   return NextResponse.json(rows);
 }
 
-export async function POST(req: Request) {
-  try {
-    const body = schema.parse(await req.json());
-    const existing = await db.query.moments.findFirst({ where: (fields, { eq }) => eq(fields.name, body.name) });
-    if (existing) return NextResponse.json(existing);
-    const [created] = await db.insert(moments).values({ name: body.name }).returning();
-    return NextResponse.json(created, { status: 201 });
-  } catch (error) {
-    const status = error instanceof ZodError ? 400 : 500;
-    const message = error instanceof ZodError ? error.flatten() : (error as Error).message;
-    return NextResponse.json({ error: message }, { status });
-  }
+export async function POST() {
+  await requireUser();
+  return NextResponse.json({ error: "Moments are fixed and cannot be added." }, { status: 405 });
 }

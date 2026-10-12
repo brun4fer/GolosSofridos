@@ -11,7 +11,7 @@ import {
   goalSubMomentActions,
   actions
 } from "../schema/schema";
-import { ensurePlayerProfileColumns, ensureTeamMetadataColumns } from "./schema-maintenance";
+import { requireOwnedTeam } from "./workspace";
 
 const lowerSm = sql`lower(coalesce(sm.name, ''))`;
 const lowerM = sql`lower(coalesce(m.name, ''))`;
@@ -68,8 +68,7 @@ type RadiographyFilters = {
 };
 
 export async function getRadiography(teamId: number, filters?: RadiographyFilters) {
-  await ensurePlayerProfileColumns();
-  await ensureTeamMetadataColumns();
+  await requireOwnedTeam(teamId);
 
   const momentId = filters?.momentId;
   const bpdCategory = filters?.bpdCategory;
@@ -698,6 +697,23 @@ export async function getRadiography(teamId: number, filters?: RadiographyFilter
     })
     .sort((a, b) => a.subMoment.localeCompare(b.subMoment));
 
+  const filteredGoals = await db.execute<{
+    id: number; minute: number; opponentName: string | null; involvedPlayerName: string | null;
+    momentName: string | null; subMomentName: string | null; mediaAssetId: string | null;
+    videoPath: string | null; attackDirection: "left_to_right" | "right_to_left";
+  }>(sql`
+    SELECT g.id, g.minute, opponent.name AS "opponentName", p.name AS "involvedPlayerName",
+      m.name AS "momentName", sm.name AS "subMomentName", g.media_asset_id AS "mediaAssetId",
+      g.video_path AS "videoPath", g.attack_direction AS "attackDirection"
+    FROM ${goals} g
+    LEFT JOIN ${teams} opponent ON opponent.id = g.opponent_team_id
+    LEFT JOIN ${players} p ON p.id = g.scorer_id
+    LEFT JOIN ${moments} m ON m.id = g.moment_id
+    LEFT JOIN ${subMoments} sm ON sm.id = g.sub_moment_id
+    WHERE ${goalFilter}
+    ORDER BY g.minute, g.id
+  `);
+
   return {
     distribution: distributionRows.rows,
     assistZones: normalizePoints(assistRows.rows),
@@ -718,6 +734,11 @@ export async function getRadiography(teamId: number, filters?: RadiographyFilter
     throwInProfiles: throwInProfileRows.rows,
     subMomentActionBreakdown,
     lossSpaces,
+    filteredGoals: filteredGoals.rows.map((goal) => ({
+      ...goal,
+      hasVideo: Boolean(goal.mediaAssetId || goal.videoPath),
+      videoPlaybackUrl: goal.mediaAssetId ? `/api/media/assets/${encodeURIComponent(goal.mediaAssetId)}/playback` : goal.videoPath
+    })),
     momentGoals: momentGoalsRows.rows[0]?.goals ?? 0,
     teamGoals: teamGoalsRows.rows[0]?.goals ?? 0,
     team: teamMeta ? { ...teamMeta, emblemPath: onlyLocal(teamMeta.emblemPath) } : null

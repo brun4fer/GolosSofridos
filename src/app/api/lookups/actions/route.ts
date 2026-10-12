@@ -2,60 +2,61 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { ZodError, z } from "zod";
+import { and, eq, inArray, max, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { eq } from "drizzle-orm";
-import { actions, goalActions, goals, goalSubMomentActions } from "@/schema/schema";
-import { ensureActionsContextColumn } from "@/server/schema-maintenance";
+import { actions, subMoments } from "@/schema/schema";
+import { requireUser } from "@/lib/auth";
 
 const schema = z.object({
   subMomentId: z.number().int().positive(),
-  name: z.string().min(2),
+  name: z.string().trim().min(2),
   context: z.enum(["field", "field_goal"]).default("field")
 });
 
 export async function POST(req: Request) {
+  const user = await requireUser();
+
   try {
-    await ensureActionsContextColumn();
     const body = schema.parse(await req.json());
-    const existing = await db.query.actions.findFirst({
-      where: (fields, { and, eq }) => and(eq(fields.subMomentId, body.subMomentId), eq(fields.name, body.name))
-    });
-    if (existing) return NextResponse.json(existing);
-    const [created] = await db.insert(actions).values({ subMomentId: body.subMomentId, name: body.name, context: body.context }).returning();
+    const subMoment = await db.query.subMoments.findFirst({ where: eq(subMoments.id, body.subMomentId) });
+    if (!subMoment) return NextResponse.json({ error: "Phase not found" }, { status: 404 });
+    const existing = await db
+      .select()
+      .from(actions)
+      .where(and(eq(actions.workspaceId, user.workspaceId), eq(actions.subMomentId, body.subMomentId), sql`lower(${actions.name}) = lower(${body.name})`))
+      .limit(1);
+    if (existing[0]) {
+      const [restored] = await db.update(actions).set({ isActive: true, context: body.context }).where(eq(actions.id, existing[0].id)).returning();
+      return NextResponse.json(restored);
+    }
+    const [last] = await db.select({ value: max(actions.sortOrder) }).from(actions).where(and(eq(actions.workspaceId, user.workspaceId), eq(actions.subMomentId, body.subMomentId)));
+    const [created] = await db.insert(actions).values({ workspaceId: user.workspaceId, subMomentId: body.subMomentId, name: body.name, context: body.context, sortOrder: Number(last?.value ?? 0) + 1 }).returning();
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
     const status = error instanceof ZodError ? 400 : 500;
-    const message = error instanceof ZodError ? error.flatten() : (error as Error).message;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: error instanceof ZodError ? error.flatten() : (error as Error).message }, { status });
   }
 }
 
-export async function DELETE(req: Request) {
+const reorderSchema = z.object({ subMomentId: z.number().int().positive(), orderedIds: z.array(z.number().int().positive()).min(1) });
+
+export async function PATCH(req: Request) {
+  const user = await requireUser();
+
   try {
-    const id = z.number().int().positive().parse(Number(new URL(req.url).searchParams.get("id")));
-    const action = await db.query.actions.findFirst({ where: (fields, { eq }) => eq(fields.id, id) });
-    if (!action) return NextResponse.json({ error: "A ação não existe." }, { status: 404 });
-
-    const [directGoal, linkedGoal, sequencedGoal] = await Promise.all([
-      db.query.goals.findFirst({ where: eq(goals.actionId, id), columns: { id: true } }),
-      db.query.goalActions.findFirst({ where: eq(goalActions.actionId, id), columns: { id: true } }),
-      db.query.goalSubMomentActions.findFirst({
-        where: eq(goalSubMomentActions.actionId, id),
-        columns: { id: true }
-      })
-    ]);
-    if (directGoal || linkedGoal || sequencedGoal) {
-      return NextResponse.json(
-        { error: "Esta ação está associada a golos e não pode ser eliminada." },
-        { status: 409 }
-      );
+    const body = reorderSchema.parse(await req.json());
+    const rows = await db.select({ id: actions.id, subMomentId: actions.subMomentId }).from(actions).where(and(eq(actions.workspaceId, user.workspaceId), inArray(actions.id, body.orderedIds)));
+    if (rows.length !== body.orderedIds.length || rows.some((row) => row.subMomentId !== body.subMomentId)) {
+      return NextResponse.json({ error: "All actions must belong to this phase" }, { status: 400 });
     }
-
-    await db.delete(actions).where(eq(actions.id, id));
-    return NextResponse.json({ success: true });
+    await db.transaction(async (tx) => {
+      for (const [index, id] of body.orderedIds.entries()) {
+        await tx.update(actions).set({ sortOrder: index + 1 }).where(and(eq(actions.id, id), eq(actions.workspaceId, user.workspaceId)));
+      }
+    });
+    return NextResponse.json({ ok: true });
   } catch (error) {
     const status = error instanceof ZodError ? 400 : 500;
-    const message = error instanceof ZodError ? "Identificador de ação inválido." : (error as Error).message;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: error instanceof ZodError ? error.flatten() : (error as Error).message }, { status });
   }
 }

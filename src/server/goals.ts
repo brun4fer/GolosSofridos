@@ -1,9 +1,12 @@
-import { eq, desc, inArray, asc, sql } from "drizzle-orm";
+import { and, eq, desc, inArray, asc, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "../db/client";
 import { actions, goalActions, goals, goalInvolvements, goalSubMomentActions, moments, players, subMoments, teams } from "../schema/schema";
 import { goalInputSchema } from "../lib/validation";
-import { ensureActionsContextColumn, ensurePlayerProfileColumns, ensureTeamMetadataColumns } from "./schema-maintenance";
+import { requireUser } from "@/lib/auth";
+import { getMediaAsset, removeGoalMediaReference, setGoalMediaReference } from "@/lib/media-library";
+import { ensureMediaWorkspace } from "@/lib/media-workspace";
+import { requireOwnedGoal, requireOwnedTeam } from "./workspace";
 
 type RawGoalPayload = Record<string, unknown>;
 
@@ -353,13 +356,11 @@ function buildSequenceEntries(parsed: ReturnType<typeof goalInputSchema.parse>):
     return [...parsed.subMomentSequence].sort((a, b) => a.sequenceOrder - b.sequenceOrder);
   }
   if (!parsed.subMomentId || parsed.actionIds.length === 0) return [];
-  return [
-    {
-      subMomentId: parsed.subMomentId,
-      actionId: parsed.actionIds[0],
-      sequenceOrder: 1
-    }
-  ];
+  return parsed.actionIds.map((actionId, index) => ({
+    subMomentId: parsed.subMomentId as number,
+    actionId,
+    sequenceOrder: index + 1
+  }));
 }
 
 function isDefensiveOrganizationMomentName(value: string) {
@@ -368,12 +369,7 @@ function isDefensiveOrganizationMomentName(value: string) {
 }
 
 export async function getGoalsByTeam(teamId: number) {
-  await ensureActionsContextColumn();
-  await ensurePlayerProfileColumns();
-  await ensureTeamMetadataColumns();
-  await ensureGoalsStorageSchema();
-  await ensureGoalActionsTable();
-  await ensureGoalSubMomentActionsTable();
+  await requireOwnedTeam(teamId);
 
   const [supportsAssistDrawing, supportsTransitionDrawing, supportsAttackingSpace, supportsGoalSubMomentActions] = await Promise.all([
     hasGoalsColumn("assist_drawing"),
@@ -395,6 +391,9 @@ export async function getGoalsByTeam(teamId: number) {
       assistDrawing: supportsAssistDrawing ? goals.assistDrawing : sql<null>`null`,
       transitionDrawing: supportsTransitionDrawing ? goals.transitionDrawing : sql<null>`null`,
       attackingSpaceId: supportsAttackingSpace ? goals.attackingSpaceId : sql<null>`null`,
+      mediaAssetId: goals.mediaAssetId,
+      videoPath: goals.videoPath,
+      attackDirection: goals.attackDirection,
       moment: moments.name,
       subMoment: subMoments.name,
       action: actions.name,
@@ -534,12 +533,12 @@ export async function getGoalsByTeam(teamId: number) {
 }
 
 export async function getGoalById(goalId: number) {
-  await ensureActionsContextColumn();
-  await ensurePlayerProfileColumns();
-  await ensureTeamMetadataColumns();
-  await ensureGoalsStorageSchema();
-  await ensureGoalActionsTable();
-  await ensureGoalSubMomentActionsTable();
+  try {
+    await requireOwnedGoal(goalId);
+  } catch (error) {
+    if (error instanceof Error && error.message === "Goal not found") return null;
+    throw error;
+  }
 
   const [supportsAssistDrawing, supportsTransitionDrawing, supportsAttackingSpace, supportsGoalSubMomentActions] = await Promise.all([
     hasGoalsColumn("assist_drawing"),
@@ -571,6 +570,8 @@ export async function getGoalById(goalId: number) {
       subMomentName: subMoments.name,
       actionName: actions.name,
       videoPath: goals.videoPath,
+      mediaAssetId: goals.mediaAssetId,
+      attackDirection: goals.attackDirection,
       fieldDrawing: goals.fieldDrawing,
       goalCoordinates: goals.goalCoordinates,
       assistCoordinates: goals.assistCoordinates,
@@ -691,6 +692,9 @@ export async function getGoalById(goalId: number) {
 
   return {
     ...row[0],
+    videoPlaybackUrl: row[0].mediaAssetId
+      ? `/api/media/assets/${encodeURIComponent(row[0].mediaAssetId)}/playback`
+      : row[0].videoPath,
     referencePlayerId,
     referencePlayerName,
     throwInTakerId,
@@ -708,18 +712,21 @@ async function upsertGoal(
   payload: unknown,
   existingGoalId?: number
 ) {
-  await ensureActionsContextColumn();
-  await ensurePlayerProfileColumns();
-  await ensureTeamMetadataColumns();
-  await ensureGoalsStorageSchema();
-  await ensureGoalActionsTable();
-  await ensureGoalSubMomentActionsTable();
   const normalized = await normalizeGoalPayload((payload ?? {}) as RawGoalPayload);
   const parsed = goalInputSchema.parse(normalized);
 
   const sequenceEntries = buildSequenceEntries(parsed);
-  if (sequenceEntries.length === 0) {
-    throw new Error("Sub-moment sequence is required");
+  const account = await requireUser();
+  const workspaceId = account.workspaceId;
+
+  let selectedMediaWorkspaceId: string | null = null;
+  if (parsed.mediaAssetId) {
+    const { mediaWorkspace } = await ensureMediaWorkspace(account);
+    const selectedAsset = await getMediaAsset(mediaWorkspace.id, parsed.mediaAssetId);
+    if (!selectedAsset || selectedAsset.storageStatus !== "READY") {
+      throw new Error("O video selecionado nao esta disponivel nesta conta");
+    }
+    selectedMediaWorkspaceId = mediaWorkspace.id;
   }
 
   const [
@@ -738,6 +745,7 @@ async function upsertGoal(
     hasGoalSubMomentActionsTable()
   ]);
 
+  if (mode === "update") await requireOwnedGoal(existingGoalId as number);
   const existingGoal =
     mode === "update" && existingGoalId
       ? await db.query.goals.findFirst({ where: eq(goals.id, existingGoalId) })
@@ -761,9 +769,9 @@ async function upsertGoal(
       : [{ playerId: primaryPlayerId, role: "involvement" as const }];
 
   const [team, primaryPlayer, opponent, moment] = await Promise.all([
-    db.query.teams.findFirst({ where: eq(teams.id, parsed.teamId) }),
+    requireOwnedTeam(parsed.teamId),
     db.query.players.findFirst({ where: eq(players.id, primaryPlayerId) }),
-    db.query.teams.findFirst({ where: eq(teams.id, parsed.opponentTeamId) }),
+    requireOwnedTeam(parsed.opponentTeamId),
     db.query.moments.findFirst({ where: eq(moments.id, parsed.momentId) })
   ]);
 
@@ -800,8 +808,12 @@ async function upsertGoal(
   });
 
   const isDefensiveOrganizationMoment = isDefensiveOrganizationMomentName(moment.name);
+  if (orderedSequenceEntries.length === 0 && !isDefensiveOrganizationMoment) {
+    throw new Error("Seleciona pelo menos uma acao para este momento");
+  }
   if (isDefensiveOrganizationMoment) {
-    if (orderedSequenceEntries.length > DEFENSIVE_ORGANIZATION_SEQUENCE.length) {
+    const selectedPhaseCount = new Set(orderedSequenceEntries.map((entry) => entry.subMomentId)).size;
+    if (selectedPhaseCount > DEFENSIVE_ORGANIZATION_SEQUENCE.length) {
       throw new Error("Organizacao Defensiva permite no maximo 4 fases.");
     }
   }
@@ -824,7 +836,7 @@ async function upsertGoal(
             context: actions.context
           })
           .from(actions)
-          .where(inArray(actions.id, actionIdsToLookup));
+          .where(and(inArray(actions.id, actionIdsToLookup), eq(actions.workspaceId, workspaceId)));
 
   if (actionRows.length !== actionIdsToLookup.length) throw new Error("Action not found");
   const actionById = new Map(actionRows.map((row) => [row.id, row]));
@@ -864,10 +876,9 @@ async function upsertGoal(
   const assistId = null;
 
   const primarySequenceEntry = orderedSequenceEntries[orderedSequenceEntries.length - 1];
-  const primarySubMoment = subMomentById.get(primarySequenceEntry.subMomentId);
-  if (!primarySubMoment) throw new Error("Primary sub-moment not found");
+  const primarySubMoment = primarySequenceEntry ? subMomentById.get(primarySequenceEntry.subMomentId) : null;
 
-  const subName = normalizeToken(primarySubMoment.name);
+  const subName = normalizeToken(primarySubMoment?.name ?? "");
   const actionNames = requestedActionRows.map((action) => normalizeToken(action.name));
   const isCorner = subName.includes("canto");
   const isFreeKick = subName.includes("livre");
@@ -927,17 +938,19 @@ async function upsertGoal(
       assistId,
       minute: parsed.minute,
       momentId: parsed.momentId,
-      subMomentId: primarySequenceEntry.subMomentId,
-      actionId: primarySequenceEntry.actionId,
+      subMomentId: primarySequenceEntry?.subMomentId ?? parsed.subMomentId ?? null,
+      actionId: primarySequenceEntry?.actionId ?? parsed.actionIds[0] ?? null,
       goalZoneId: null,
       goalCoordinates: parsed.goalCoordinates ?? null,
       videoPath: parsed.videoPath || null,
+      mediaAssetId: parsed.mediaAssetId || null,
       fieldDrawing: parsed.fieldDrawing ?? null,
       assistCoordinates: parsed.assistDrawing ?? parsed.assistCoordinates ?? null,
       cornerProfile: isCorner ? parsed.cornerProfile ?? null : null,
       freekickProfile: isFreeKick ? parsed.freekickProfile ?? null : null,
       throwInProfile: isThrowIn ? parsed.throwInProfile ?? null : null,
       goalkeeperOutlet: parsed.goalkeeperOutlet ?? null,
+      attackDirection: parsed.attackDirection,
       notes: parsed.notes || null,
       cornerTakerId,
       freekickTakerId,
@@ -966,14 +979,16 @@ async function upsertGoal(
 
     if (supportsGoalSubMomentActions) {
       await tx.delete(goalSubMomentActions).where(eq(goalSubMomentActions.goalId, currentGoalId));
-      await tx.insert(goalSubMomentActions).values(
-        orderedSequenceEntries.map((entry) => ({
-          goalId: currentGoalId,
-          subMomentId: entry.subMomentId,
-          actionId: entry.actionId,
-          sequenceOrder: entry.sequenceOrder
-        }))
-      );
+      if (orderedSequenceEntries.length > 0) {
+        await tx.insert(goalSubMomentActions).values(
+          orderedSequenceEntries.map((entry) => ({
+            goalId: currentGoalId,
+            subMomentId: entry.subMomentId,
+            actionId: entry.actionId,
+            sequenceOrder: entry.sequenceOrder
+          }))
+        );
+      }
     }
 
     await tx.delete(goalInvolvements).where(eq(goalInvolvements.goalId, currentGoalId));
@@ -990,6 +1005,20 @@ async function upsertGoal(
     return currentGoalId;
   });
 
+  try {
+    if (parsed.mediaAssetId && selectedMediaWorkspaceId) {
+      await setGoalMediaReference({
+        mediaWorkspaceId: selectedMediaWorkspaceId,
+        mediaAssetId: parsed.mediaAssetId,
+        goalId
+      });
+    } else if (mode === "update") {
+      await removeGoalMediaReference(goalId);
+    }
+  } catch (error) {
+    console.error("[goal-media-reference]", error);
+  }
+
   return goalId;
 }
 
@@ -1002,13 +1031,11 @@ export async function updateGoal(id: number, payload: unknown) {
 }
 
 export async function deleteGoal(goalId: number) {
-  await ensureGoalsStorageSchema();
-  await ensureGoalActionsTable();
-  await ensureGoalSubMomentActionsTable();
+  await requireOwnedGoal(goalId);
 
   const existingGoal = await db.query.goals.findFirst({
     where: eq(goals.id, goalId),
-    columns: { id: true }
+    columns: { id: true, mediaAssetId: true }
   });
   if (!existingGoal) {
     throw new Error("Goal not found");
@@ -1023,6 +1050,12 @@ export async function deleteGoal(goalId: number) {
     await tx.delete(goalInvolvements).where(eq(goalInvolvements.goalId, goalId));
     await tx.delete(goals).where(eq(goals.id, goalId));
   });
+
+  try {
+    await removeGoalMediaReference(goalId);
+  } catch (error) {
+    console.error("[goal-media-reference-delete]", error);
+  }
 
   return goalId;
 }

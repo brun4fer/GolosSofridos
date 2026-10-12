@@ -2,9 +2,12 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { deleteGoal, getGoalById, updateGoal } from "@/server/goals";
+import { requireUser } from "@/lib/auth";
 import { ZodError } from "zod";
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
+  await requireUser();
+
   const id = Number(params.id);
   if (Number.isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   const goal = await getGoalById(id);
@@ -13,6 +16,8 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 }
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
+  await requireUser();
+
   const id = Number(params.id);
   if (Number.isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   try {
@@ -37,6 +42,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 }
 
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+  await requireUser();
+
   const id = Number(params.id);
   if (Number.isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   try {

@@ -1,9 +1,12 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth";
 import { getRadiography, type RadiographyBpdCategory } from "@/server/radiography";
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
+  await requireUser();
+
   const teamId = Number(params.id);
   if (Number.isNaN(teamId)) return NextResponse.json({ error: "Invalid team id" }, { status: 400 });
   try {

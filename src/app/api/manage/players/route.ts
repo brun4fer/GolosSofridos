@@ -2,9 +2,12 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { requireUser } from "@/lib/auth";
 import { createPlayer, listPlayersWithTeams } from "@/server/admin";
 
 export async function GET(req: Request) {
+  await requireUser();
+
   const { searchParams } = new URL(req.url);
   const teamIdParam = searchParams.get("teamId");
   const teamId = teamIdParam ? Number(teamIdParam) : undefined;
@@ -13,6 +16,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  await requireUser();
+
   try {
     const json = await req.json();
     const created = await createPlayer(json);
