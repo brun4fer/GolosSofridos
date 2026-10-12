@@ -33,7 +33,9 @@ function putFile(url: string, file: File, onProgress: (value: number) => void) {
     xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
     xhr.upload.onprogress = (event) => event.lengthComputable && onProgress(event.loaded / event.total);
     xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload falhou (${xhr.status}).`));
-    xhr.onerror = () => reject(new Error("O upload foi interrompido."));
+    xhr.onerror = () => reject(new Error(`O browser bloqueou o envio para o armazenamento privado. Confirma a configuracao CORS do R2: permite a origem ${window.location.origin}, o metodo PUT e o cabecalho Content-Type.`));
+    xhr.ontimeout = () => reject(new Error("O envio do video excedeu o tempo limite."));
+    xhr.timeout = 10 * 60 * 1000;
     xhr.send(file);
   });
 }

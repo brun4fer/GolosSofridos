@@ -202,19 +202,66 @@ const translations: Array<[string, string]> = [
   ["Remover", "Remove"], ["Criar", "Create"], ["Atualizar", "Update"], ["Carregar", "Upload"],
   ["Obrigatório", "Required"], ["Opcional", "Optional"], ["Página", "Page"], [" de ", " of "],
   ["Sim", "Yes"], ["Não", "No"], ["Nome", "Name"], ["Descrição", "Description"], ["Notas", "Notes"],
-  ["Vídeo", "Video"], ["Erro", "Error"], ["Sucesso", "Success"]
+  ["Vídeo", "Video"], ["Erro", "Error"], ["Sucesso", "Success"],
+  ["Substituir video", "Replace video"], ["Enviar video", "Upload video"],
+  ["Biblioteca privada", "Private library"], ["Remover", "Remove"],
+  ["Os videos ficam privados e visiveis apenas nesta conta.", "Videos remain private and are visible only in this account."],
+  ["Escolher video existente", "Choose an existing video"], ["Fechar", "Close"],
+  ["A carregar...", "Loading..."], ["Ainda nao existem videos.", "There are no videos yet."],
+  ["Seleciona um ficheiro de video.", "Select a video file."],
+  ["Nao foi possivel enviar o video.", "The video could not be uploaded."],
+  ["Nao foi possivel abrir a biblioteca.", "The library could not be opened."],
+  ["Pedido sem sucesso.", "Request failed."], ["Upload falhou", "Upload failed"],
+  ["O envio do video excedeu o tempo limite.", "The video upload timed out."],
+  ["O browser bloqueou o envio para o armazenamento privado.", "The browser blocked the upload to private storage."],
+  ["Confirma a configuracao CORS do R2: permite a origem", "Check the R2 CORS policy: allow the origin"],
+  ["o metodo PUT e o cabecalho Content-Type.", "the PUT method and the Content-Type header."]
 ];
 
 const sortedTranslations = [...translations].sort(([a], [b]) => b.length - a.length);
 
-function translate(value: string) {
-  return sortedTranslations.reduce((text, [source, target]) => text.replaceAll(source, target), value);
+// Some screens were authored in English (sign-in, account and navigation).
+// The core catalogue remains in Portuguese, so Portuguese only needs to change
+// those static English labels; the database taxonomy is already Portuguese.
+const portugueseTranslations: Array<[string, string]> = [
+  ["Record Goal Conceded", "Registar Golo Sofrido"], ["Goals Conceded", "Golos Sofridos"],
+  ["Goals Conceded History", "Histórico de Golos Sofridos"], ["Goals Conceded by Match Moment", "Golos Sofridos por Momento de Jogo"],
+  ["Goals with goal location", "Golos com localização na baliza"], ["Goals Conceded", "Golos Sofridos"],
+  ["Private library", "Biblioteca privada"], ["Replace video", "Substituir vídeo"], ["Upload video", "Enviar vídeo"],
+  ["Choose an existing video", "Escolher vídeo existente"], ["Videos remain private and are visible only in this account.", "Os vídeos ficam privados e visíveis apenas nesta conta."],
+  ["The browser blocked the upload to private storage.", "O navegador bloqueou o envio para o armazenamento privado."],
+  ["The video upload timed out.", "O envio do vídeo excedeu o tempo limite."],
+  ["Check the R2 CORS policy: allow the origin", "Confirma a política CORS do R2: permite a origem"],
+  ["the PUT method and the Content-Type header.", "o método PUT e o cabeçalho Content-Type."],
+  ["Settings", "Configurações"], ["Teams", "Equipas"], ["Players", "Jogadores"], ["Statistics", "Estatísticas"],
+  ["Reports", "Relatórios"], ["Rankings", "Rankings"], ["Navigation", "Navegação"], ["Sign out", "Terminar sessão"],
+  ["Language", "Idioma"], ["English", "Inglês"], ["Sign in", "Iniciar sessão"],
+  ["Access the private workspace assigned to your account.", "Acede ao espaço privado atribuído à tua conta."],
+  ["The database is temporarily unavailable. Check the local configuration and try again.", "A base de dados está temporariamente indisponível. Confirma a configuração e tenta novamente."],
+  ["The username or password is incorrect.", "O nome de utilizador ou a palavra-passe estão incorretos."],
+  ["Username", "Nome de utilizador"], ["Password", "Palavra-passe"], ["No account yet?", "Ainda não tens conta?"], ["Create one", "Criar conta"],
+  ["Create account", "Criar conta"], ["Your private workspace", "O teu espaço privado"],
+  ["Registration creates an empty workspace that only this account can access.", "O registo cria um espaço vazio ao qual apenas esta conta pode aceder."],
+  ["Workspace or club name", "Nome do espaço ou clube"], ["Confirm password", "Confirmar palavra-passe"],
+  ["Create private workspace", "Criar espaço privado"], ["Already registered?", "Já tens conta?"],
+  ["Account security", "Segurança da conta"], ["Workspace:", "Espaço:"],
+  ["Change your temporary password", "Altera a palavra-passe temporária"],
+  ["Choose a private password before accessing the software.", "Escolhe uma palavra-passe privada antes de aceder ao software."],
+  ["Current password", "Palavra-passe atual"], ["New password", "Nova palavra-passe"],
+  ["Confirm new password", "Confirmar nova palavra-passe"], ["Save and continue", "Guardar e continuar"],
+  ["Sign out and use another account", "Terminar sessão e usar outra conta"], ["Close", "Fechar"], ["Loading...", "A carregar..."]
+];
+const sortedPortugueseTranslations = [...portugueseTranslations].sort(([a], [b]) => b.length - a.length);
+
+function translate(value: string, locale: "en" | "pt") {
+  const dictionary = locale === "en" ? sortedTranslations : sortedPortugueseTranslations;
+  return dictionary.reduce((text, [source, target]) => text.replaceAll(source, target), value);
 }
 
-function translateTree(root: Node) {
+function translateTree(root: Node, locale: "en" | "pt") {
   if (root.nodeType === Node.TEXT_NODE) {
     if (root.nodeValue) {
-      const translated = translate(root.nodeValue);
+      const translated = translate(root.nodeValue, locale);
       if (translated !== root.nodeValue) root.nodeValue = translated;
     }
     return;
@@ -223,7 +270,7 @@ function translateTree(root: Node) {
   let node: Node | null;
   while ((node = walker.nextNode())) {
     if (!node.nodeValue) continue;
-    const translated = translate(node.nodeValue);
+    const translated = translate(node.nodeValue, locale);
     if (translated !== node.nodeValue) node.nodeValue = translated;
   }
   if (root instanceof Element) {
@@ -231,7 +278,7 @@ function translateTree(root: Node) {
       for (const attribute of ["placeholder", "title", "aria-label", "alt"]) {
         const value = element.getAttribute(attribute);
         if (value) {
-          const translated = translate(value);
+          const translated = translate(value, locale);
           if (translated !== value) element.setAttribute(attribute, translated);
         }
       }
@@ -239,15 +286,16 @@ function translateTree(root: Node) {
   }
 }
 
-export function EnglishLocale() {
+export function EnglishLocale({ locale = "en" }: { locale?: "en" | "pt" }) {
   useEffect(() => {
-    translateTree(document.body);
+    document.documentElement.lang = locale === "pt" ? "pt-PT" : "en";
+    translateTree(document.body, locale);
     const observer = new MutationObserver((mutations) => mutations.forEach((mutation) => {
-      if (mutation.type === "characterData") translateTree(mutation.target);
-      mutation.addedNodes.forEach(translateTree);
+      if (mutation.type === "characterData") translateTree(mutation.target, locale);
+      mutation.addedNodes.forEach((node) => translateTree(node, locale));
     }));
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
     return () => observer.disconnect();
-  }, []);
+  }, [locale]);
   return null;
 }
