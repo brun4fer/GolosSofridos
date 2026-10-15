@@ -2141,6 +2141,7 @@ const filteredChampionships = useMemo(() => {
       await fetchJson(`/api/lookups/actions/${action.id}`, { method: "DELETE" });
       setActionIds((current) => current.filter((id) => id !== action.id));
       await qc.invalidateQueries({ queryKey: ["lookups"] });
+      await qc.invalidateQueries({ queryKey: ["taxonomy-admin-lookups"] });
       setMessage(`A ação “${action.name}” foi eliminada.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Não foi possível eliminar a ação.");
@@ -2925,6 +2926,21 @@ const filteredChampionships = useMemo(() => {
                                 </span>
                                 <button
                                   type="button"
+                                  className="rounded-md p-1.5 text-cyan-200 transition hover:bg-cyan-500/15 hover:text-cyan-100"
+                                  aria-label={`Editar ação ${action.name}`}
+                                  title="Editar ação"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setEditingCatalogActionId(action.id);
+                                    setEditingCatalogActionName(action.name);
+                                    setEditingCatalogActionContext(action.context);
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
                                   className="rounded-md p-1.5 text-red-300 transition hover:bg-red-500/15 hover:text-red-200"
                                   aria-label={`Eliminar ação ${action.name}`}
                                   title="Eliminar ação"
@@ -2949,6 +2965,23 @@ const filteredChampionships = useMemo(() => {
                             {action.name}
                           </Badge>
                         ))}
+                      </div>
+                    )}
+                    {editingCatalogActionId && filteredActions.some((action) => action.id === editingCatalogActionId) && (
+                      <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/5 p-3">
+                        <p className="mb-2 text-xs font-semibold text-cyan-100">Editar ação</p>
+                        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_180px_auto_auto]">
+                          <Input value={editingCatalogActionName} onChange={(event) => setEditingCatalogActionName(event.target.value)} aria-label="Nome da ação" />
+                          <Select value={editingCatalogActionContext} onChange={(event) => setEditingCatalogActionContext(event.target.value as "field" | "field_goal")}><option value="field">Campo</option><option value="field_goal">Campo + Baliza</option></Select>
+                          <Button type="button" size="sm" onClick={() => void saveCatalogAction(editingCatalogActionId)}>Guardar</Button>
+                          <Button type="button" size="sm" variant="ghost" onClick={() => setEditingCatalogActionId(null)}>Cancelar</Button>
+                        </div>
+                      </div>
+                    )}
+                    {subMomentId && (taxonomyAdminQuery.data?.actions ?? []).filter((action) => action.subMomentId === subMomentId && !action.isActive).length > 0 && (
+                      <div className="space-y-1 rounded-xl border border-dashed border-border/60 p-3 text-xs text-muted-foreground">
+                        <p>ações removidas</p>
+                        {(taxonomyAdminQuery.data?.actions ?? []).filter((action) => action.subMomentId === subMomentId && !action.isActive).map((action) => <button key={action.id} type="button" className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left hover:bg-white/5" onClick={() => void setCatalogActionActive(action.id, true)}><span>{action.name}</span><span className="flex items-center gap-1"><RotateCcw className="h-3 w-3" />Restaurar</span></button>)}
                       </div>
                     )}
                   </div>

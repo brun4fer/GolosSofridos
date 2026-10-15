@@ -68,11 +68,14 @@ type RadiographyFilters = {
 };
 
 export async function getRadiography(teamId: number, filters?: RadiographyFilters) {
-  await requireOwnedTeam(teamId);
+  const ownedTeam = await requireOwnedTeam(teamId);
+  const workspaceId = ownedTeam.workspaceId;
 
   const momentId = filters?.momentId;
   const bpdCategory = filters?.bpdCategory;
-  const shouldComputeSubMomentBreakdown = Boolean(momentId || bpdCategory);
+  // The All Match Moments filter is a valid analysis and must return its
+  // goals/actions too, not only a manually selected moment.
+  const shouldComputeSubMomentBreakdown = true;
   const hasGoalSubMomentActionsTable = await hasTable("goal_sub_moment_actions");
   const shouldUseRelationalBreakdown = hasGoalSubMomentActionsTable;
   const teamCondition = sql`g.team_id = ${teamId}`;
@@ -596,11 +599,13 @@ export async function getRadiography(teamId: number, filters?: RadiographyFilter
   const subMomentActionCatalogRows =
     shouldComputeSubMomentBreakdown && subMomentIdsForCatalog.length > 0
       ? await db.execute<{ subMomentId: number; action: string }>(sql`
-          SELECT
+          SELECT DISTINCT
             a.sub_moment_id AS "subMomentId",
             a.name AS action
           FROM ${actions} a
           WHERE a.sub_moment_id IN (${sql.join(subMomentIdsForCatalog.map((id) => sql`${id}`), sql`, `)})
+            AND a.workspace_id = ${workspaceId}
+            AND a.is_active = true
           ORDER BY a.sub_moment_id, a.name
         `)
       : { rows: [] as Array<{ subMomentId: number; action: string }> };

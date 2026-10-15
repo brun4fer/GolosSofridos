@@ -1247,11 +1247,14 @@ export default function RadiographyPanel({
                   {selectedVideoGoal?.videoPlaybackUrl ? <video key={selectedVideoGoal.id} controls className="aspect-video w-full rounded-xl bg-black object-contain" src={selectedVideoGoal.videoPlaybackUrl} /> : <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed border-border/60 bg-black/40 text-sm text-muted-foreground">Sem vídeo</div>}
                 </div>
                 <div className="max-h-[520px] space-y-2 overflow-y-auto">
-                  {filteredGoals.map((goal) => <button key={goal.id} type="button" onClick={() => setSelectedVideoGoalId(goal.id)} className={cn("w-full rounded-xl border p-3 text-left", goal.id === selectedVideoGoal?.id ? "border-cyan-300/60 bg-cyan-400/10" : "border-border/60")}>
-                    <div className="flex justify-between gap-2"><span className="font-semibold">vs {goal.opponentName ?? "Adversário"}</span><span>{goal.minute}&apos;</span></div>
-                    <p className="text-xs text-muted-foreground">{goal.involvedPlayerName ?? "Sem jogador"} · {goal.momentName ?? "—"}{goal.subMomentName ? ` · ${goal.subMomentName}` : ""}</p>
-                    <p className="mt-1 text-[11px] text-cyan-200">{goal.hasVideo ? "Com vídeo" : "Sem vídeo"} · {goal.attackDirection === "right_to_left" ? "← Direita para esquerda" : "Esquerda para direita →"}</p>
-                  </button>)}
+                  {filteredGoals.map((goal) => <div key={goal.id} className={cn("rounded-xl border p-3", goal.id === selectedVideoGoal?.id ? "border-cyan-300/60 bg-cyan-400/10" : "border-border/60")}>
+                    <button type="button" onClick={() => setSelectedVideoGoalId(goal.id)} className="w-full text-left">
+                      <div className="flex justify-between gap-2"><span className="font-semibold">vs {goal.opponentName ?? "Adversário"}</span><span>{goal.minute}&apos;</span></div>
+                      <p className="text-xs text-muted-foreground">{goal.involvedPlayerName ?? "Sem jogador"} · {goal.momentName ?? "—"}{goal.subMomentName ? ` · ${goal.subMomentName}` : ""}</p>
+                      <p className="mt-1 text-[11px] text-cyan-200">{goal.hasVideo ? "Com vídeo" : "Sem vídeo"} · {goal.attackDirection === "right_to_left" ? "← Direita para esquerda" : "Esquerda para direita →"}</p>
+                    </button>
+                    <a href={`/stats/goal/${goal.id}`} className="mt-2 inline-flex text-xs font-semibold text-cyan-300 hover:text-cyan-100">Ver detalhes</a>
+                  </div>)}
                 </div>
               </CardContent>
             </Card>

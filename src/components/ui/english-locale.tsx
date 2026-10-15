@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
 // Database taxonomy stays in Portuguese for backwards compatibility. This
 // translates static copy and taxonomy values returned by the existing API.
@@ -202,7 +202,7 @@ const translations: Array<[string, string]> = [
   ["Remover", "Remove"], ["Criar", "Create"], ["Atualizar", "Update"], ["Carregar", "Upload"],
   ["Obrigatório", "Required"], ["Opcional", "Optional"], ["Página", "Page"], [" de ", " of "],
   ["Sim", "Yes"], ["Não", "No"], ["Nome", "Name"], ["Descrição", "Description"], ["Notas", "Notes"],
-  ["Vídeo", "Video"], ["Erro", "Error"], ["Sucesso", "Success"],
+  ["Vídeo", "Video"], ["Erro", "Error"], ["Sucesso", "Success"], ["Português", "Portuguese"],
   ["Substituir video", "Replace video"], ["Enviar video", "Upload video"],
   ["Biblioteca privada", "Private library"], ["Remover", "Remove"],
   ["Os videos ficam privados e visiveis apenas nesta conta.", "Videos remain private and are visible only in this account."],
@@ -215,15 +215,47 @@ const translations: Array<[string, string]> = [
   ["O envio do video excedeu o tempo limite.", "The video upload timed out."],
   ["O browser bloqueou o envio para o armazenamento privado.", "The browser blocked the upload to private storage."],
   ["Confirma a configuracao CORS do R2: permite a origem", "Check the R2 CORS policy: allow the origin"],
-  ["o metodo PUT e o cabecalho Content-Type.", "the PUT method and the Content-Type header."]
+  ["o metodo PUT e o cabecalho Content-Type.", "the PUT method and the Content-Type header."],
+  ["Ver detalhes", "View details"], ["Detalhes", "View details"],
+  ["Com vídeo", "With video"], ["Sem vídeo", "Without video"],
+  ["Todos os momentos", "All match moments"], ["Ações por Sub-momento", "Actions by sub-moment"]
+  , ["Editar ação da bola parada", "Edit set-piece action"], ["ações removidas", "removed actions"],
+  ["Restaurar", "Restore"], ["Editar ação", "Edit action"], ["Nome da ação", "Action name"],
+  ["Executante do canto", "Corner taker"], ["Executante da falta", "Free-kick taker"],
+  ["Autor do cruzamento", "Cross provider"], ["Perfil de canto", "Corner profile"],
+  ["Perfil de livre", "Free-kick profile"], ["Nome do momento", "Moment name"],
+  ["Nome do sub-momento", "Sub-moment name"], ["Nova acao", "New action"],
+  ["Sentido do ataque adversario", "Opponent attack direction"],
+  ["Esquerda para a direita", "Left to right"], ["Direita para a esquerda", "Right to left"],
+  ["Direita para esquerda", "Right to left"], ["Esquerda para direita", "Left to right"],
+  ["ATAQUE ADVERSARIO", "OPPONENT ATTACK"], ["SENTIDOS MISTOS", "MIXED DIRECTIONS"],
+  ["Ataque adversário: direita para esquerda", "Opponent attack: right to left"],
+  ["Ataque adversário: esquerda para direita", "Opponent attack: left to right"],
+  ["Momentos da Equipa", "Team Moments"], ["Mapa de remate", "Shot Map"],
+  ["Golos sofridos do filtro", "Goals conceded for the filter"],
+  ["Os golos sem vídeo permanecem na lista.", "Goals without video remain in the list."],
+  ["Mapas:", "Maps:"], ["Filtro:", "Filter:"], ["Momento dominante", "Dominant moment"],
+  ["Bola parada principal", "Main set piece"], ["Cobertura de Dados", "Data Coverage"],
+  ["Todas as equipas", "All teams"], ["Todas as fases", "All phases"],
+  ["Todos os jogadores relevantes", "All relevant players"], ["Todos os sentidos", "All directions"],
+  ["Limpar filtros", "Clear filters"], ["Minuto inicial", "Start minute"], ["Minuto final", "End minute"],
+  ["golos encontrados", "goals found"], ["Os golos sem vídeo continuam visíveis e não entram no Play all.", "Goals without video remain visible and are not included in Play all."],
+  ["Reports de golos sofridos", "Goals Conceded Reports"],
+  ["Combina filtros, revê os lances e reproduz apenas os golos com vídeo.", "Combine filters, review incidents and play only goals with video."],
+  ["Ligas", "Leagues"], ["UI Dark Ops", "Dark Ops Interface"], ["Ver", "View details"],
+  ["Esquerdo", "Left"], ["Direito", "Right"], ["Ambos", "Both"],
+  ["Logótipo", "Logo"], ["Logo", "Logo"], ["Reprodução do lance", "Incident replay"],
+  ["Ainda nao existem videos.", "There are no videos yet."], ["Escolher video existente", "Choose an existing video"],
+  ["Enviar video", "Upload video"], ["Substituir video", "Replace video"]
 ];
 
 const sortedTranslations = [...translations].sort(([a], [b]) => b.length - a.length);
 
-// Some screens were authored in English (sign-in, account and navigation).
-// The core catalogue remains in Portuguese, so Portuguese only needs to change
-// those static English labels; the database taxonomy is already Portuguese.
-const portugueseTranslations: Array<[string, string]> = [
+// A Portuguese source always has an English equivalent above. Generate the
+// reverse catalogue from that same source of truth so a label can never be
+// translated in only one direction. The explicit entries below cover copy
+// which was originally authored in English.
+const englishSourcePortugueseTranslations: Array<[string, string]> = [
   ["Record Goal Conceded", "Registar Golo Sofrido"], ["Goals Conceded", "Golos Sofridos"],
   ["Goals Conceded History", "Histórico de Golos Sofridos"], ["Goals Conceded by Match Moment", "Golos Sofridos por Momento de Jogo"],
   ["Goals with goal location", "Golos com localização na baliza"], ["Goals Conceded", "Golos Sofridos"],
@@ -234,8 +266,8 @@ const portugueseTranslations: Array<[string, string]> = [
   ["Check the R2 CORS policy: allow the origin", "Confirma a política CORS do R2: permite a origem"],
   ["the PUT method and the Content-Type header.", "o método PUT e o cabeçalho Content-Type."],
   ["Settings", "Configurações"], ["Teams", "Equipas"], ["Players", "Jogadores"], ["Statistics", "Estatísticas"],
-  ["Reports", "Relatórios"], ["Rankings", "Rankings"], ["Navigation", "Navegação"], ["Sign out", "Terminar sessão"],
-  ["Language", "Idioma"], ["English", "Inglês"], ["Sign in", "Iniciar sessão"],
+  ["Reports", "Relatórios"], ["Rankings", "Classificações"], ["Navigation", "Navegação"], ["Sign out", "Terminar sessão"],
+  ["Language", "Idioma"], ["English", "Inglês"], ["Portuguese", "Português"], ["Sign in", "Iniciar sessão"],
   ["Access the private workspace assigned to your account.", "Acede ao espaço privado atribuído à tua conta."],
   ["The database is temporarily unavailable. Check the local configuration and try again.", "A base de dados está temporariamente indisponível. Confirma a configuração e tenta novamente."],
   ["The username or password is incorrect.", "O nome de utilizador ou a palavra-passe estão incorretos."],
@@ -249,13 +281,66 @@ const portugueseTranslations: Array<[string, string]> = [
   ["Choose a private password before accessing the software.", "Escolhe uma palavra-passe privada antes de aceder ao software."],
   ["Current password", "Palavra-passe atual"], ["New password", "Nova palavra-passe"],
   ["Confirm new password", "Confirmar nova palavra-passe"], ["Save and continue", "Guardar e continuar"],
-  ["Sign out and use another account", "Terminar sessão e usar outra conta"], ["Close", "Fechar"], ["Loading...", "A carregar..."]
+  ["Sign out and use another account", "Terminar sessão e usar outra conta"], ["Close", "Fechar"], ["Loading...", "A carregar..."],
+  ["View details", "Ver detalhes"], ["With video", "Com vídeo"], ["Without video", "Sem vídeo"],
+  ["All match moments", "Todos os momentos"], ["Actions by sub-moment", "Ações por sub-momento"],
+  ["Play all", "Reproduzir todos"], ["No video", "Sem vídeo"], ["Goal video", "Vídeo do golo"]
+  , ["Edit set-piece action", "Editar ação da bola parada"], ["removed actions", "ações removidas"],
+  ["Restore", "Restaurar"], ["Edit action", "Editar ação"], ["Action name", "Nome da ação"],
+  ["Goal", "Golo"], ["Ranking", "Classificação"], ["Filters", "Filtros"],
+  ["Select the context before viewing metrics", "Seleciona o contexto antes de ver as métricas"],
+  ["Team Badge", "Emblema da equipa"], ["Reference player", "Jogador referência"],
+  ["Most involved", "Mais envolvidos"], ["Total Goals Conceded", "Total de Golos Sofridos"],
+  ["Stadium and Pitch Dimensions", "Estádio e Dimensões do Relvado"],
+  ["Goal Map", "Mapa da Baliza"], ["Locations of all goals conceded", "Localizações de todos os golos sofridos"],
+  ["Quickly edit any conceded goal", "Edita rapidamente qualquer golo sofrido"],
+  ["Delete Goal Conceded", "Eliminar Golo Sofrido"], ["Analysis Video", "Vídeo de Análise"],
+  ["No data available", "Sem dados disponíveis"], ["No goals conceded yet.", "Ainda não há golos sofridos."],
+  ["No goals conceded for this context yet.", "Ainda não há golos sofridos para este contexto."],
+  ["No goals conceded in this context yet.", "Ainda não há golos sofridos neste contexto."],
+  ["No video available", "Sem vídeo disponível"], ["Incident replay", "Reprodução do lance"],
+  ["Incident data", "Dados do lance"], ["Goal entry point", "Ponto de entrada na baliza"],
+  ["Shot zone", "Zona de remate"], ["Reference point on the pitch", "Ponto de referência no campo"],
+  ["Turnover point", "Ponto da perda"], ["Previous moment", "Momento anterior"],
+  ["Shot location on the pitch.", "Localização do remate no campo."],
+  ["Data Coverage", "Cobertura de Dados"], ["Sub-moments", "Sub-momentos"],
+  ["Defensive Set Pieces", "Bolas Paradas Defensivas"], ["More involved", "Mais envolvidos"],
+  ["Context", "Contexto"], ["Competition", "Campeonato"], ["Season", "Época"],
+  ["Opponent", "Adversário"], ["All moments", "Todos os momentos"],
+  ["No records", "Sem registos"], ["No data", "Sem dados"], ["No image", "Sem imagem"],
+  ["No badge", "Sem emblema"], ["Loading...", "A carregar..."], ["Saving...", "A guardar..."],
+  ["Save", "Guardar"], ["Cancel", "Cancelar"], ["Delete", "Eliminar"], ["Remove", "Remover"],
+  ["Create", "Criar"], ["Update", "Atualizar"], ["Upload", "Carregar"], ["Close", "Fechar"],
+  ["Search", "Pesquisar"], ["Select", "Selecionar"], ["Selected", "Selecionado"],
+  ["Next", "Seguinte"], ["Previous", "Anterior"], ["Back", "Voltar"], ["Required", "Obrigatório"],
+  ["Optional", "Opcional"], ["Name", "Nome"], ["Description", "Descrição"], ["Notes", "Notas"],
+  ["Video", "Vídeo"], ["Error", "Erro"], ["Success", "Sucesso"], ["Photo", "Foto"],
+  ["File", "Ficheiro"], ["Pitch", "Campo"], ["Actions", "Ações"],
+  ["Action", "Ação"], ["Moment", "Momento"], ["Sub-moment", "Sub-momento"],
+  ["Phase", "Fase"], ["Percentage of Goals Conceded", "Percentagem de Golos Sofridos"],
+  ["of", "de"], ["goals conceded", "golos sofridos"], ["goals", "golos"], ["goal", "golo"]
+];
+const portugueseTranslations: Array<[string, string]> = [
+  ...englishSourcePortugueseTranslations,
+  ...translations.map(([portuguese, english]) => [english, portuguese] as [string, string])
 ];
 const sortedPortugueseTranslations = [...portugueseTranslations].sort(([a], [b]) => b.length - a.length);
 
+const singleWord = /^[\p{L}\p{N}]+$/u;
+
+function replaceTranslation(text: string, source: string, target: string) {
+  // Short, standalone labels such as “of”, “goal” and “golo” must never
+  // change part of another word (for example, “Sofrido”).
+  if (singleWord.test(source)) {
+    const escapedSource = source.replace(/[.*+?^$()|[\]\\]/g, "\\$&");
+    return text.replace(new RegExp("(?<![\\p{L}\\p{N}])" + escapedSource + "(?![\\p{L}\\p{N}])", "gu"), target);
+  }
+  return text.replaceAll(source, target);
+}
+
 function translate(value: string, locale: "en" | "pt") {
   const dictionary = locale === "en" ? sortedTranslations : sortedPortugueseTranslations;
-  return dictionary.reduce((text, [source, target]) => text.replaceAll(source, target), value);
+  return dictionary.reduce((text, [source, target]) => replaceTranslation(text, source, target), value);
 }
 
 function translateTree(root: Node, locale: "en" | "pt") {
@@ -286,15 +371,37 @@ function translateTree(root: Node, locale: "en" | "pt") {
   }
 }
 
-export function EnglishLocale() {
-  useEffect(() => {
-    document.documentElement.lang = "en";
-    // This is deliberately a bounded translation pass. A permanent DOM observer
-    // can process React updates recursively and make the browser unresponsive.
-    const translatePage = () => translateTree(document.body, "en");
+export function EnglishLocale({ locale }: { locale: "en" | "pt" }) {
+  useLayoutEffect(() => {
+    document.documentElement.lang = locale === "pt" ? "pt-PT" : "en";
+    const translatePage = () => translateTree(document.body, locale);
     translatePage();
     const delayedPass = window.setTimeout(translatePage, 750);
-    return () => window.clearTimeout(delayedPass);
-  }, []);
+
+    // React Query screens add result rows after the initial render. Observe only
+    // newly-added DOM branches and process them once per animation frame. We do
+    // not observe text mutations, so translation itself can never re-trigger the
+    // observer or lock the browser in a mutation loop.
+    const pending = new Set<Node>();
+    let frame: number | null = null;
+    const flush = () => {
+      frame = null;
+      const nodes = Array.from(pending);
+      pending.clear();
+      nodes.forEach((node) => {
+        if (node.isConnected) translateTree(node, locale);
+      });
+    };
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) mutation.addedNodes.forEach((node) => pending.add(node));
+      if (pending.size && frame === null) frame = window.requestAnimationFrame(flush);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      window.clearTimeout(delayedPass);
+      observer.disconnect();
+      if (frame !== null) window.cancelAnimationFrame(frame);
+    };
+  }, [locale]);
   return null;
 }
